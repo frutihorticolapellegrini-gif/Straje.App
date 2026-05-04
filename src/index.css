@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .btn-primary {
+    @apply bg-brand-black text-brand-white px-6 py-2 rounded-semi shadow-btn hover:bg-brand-dark transition-colors duration-200 font-medium tracking-wide;
+  }
+  
+  .btn-accent {
+    @apply bg-brand-blue text-brand-white px-6 py-2 rounded-semi shadow-btn hover:bg-brand-blueHover transition-colors duration-200 font-medium tracking-wide;
+  }
+  
+  .btn-outline {
+    @apply border border-brand-gray text-brand-dark px-6 py-2 rounded-semi shadow-btn hover:bg-brand-lightGray transition-colors duration-200 font-medium tracking-wide;
+  }
+}
+
+body {
+  @apply bg-brand-lightGray text-brand-black;
+}

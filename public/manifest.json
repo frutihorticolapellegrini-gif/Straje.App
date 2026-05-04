@@ -1,0 +1,29 @@
+{
+  "name": "Straje.App - Gestión de Tienda",
+  "short_name": "Straje",
+  "id": "https://www.strajeapp.com/",
+  "description": "Sistema de Gestión Integral para Tiendas de Ropa y Alquiler de Trajes.",
+  "start_url": "index.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "pwa-icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "pwa-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+📄 DOCUMENTO MAESTRO: Straje.App
+Descripción: Sistema de Gestión Integral para Tiendas de Ropa y Alquiler de Trajes/Vestidos. Tecnología: React/Vite (PWA Responsiva), Supabase (Base de datos y Auth), Mercado Pago (Suscripciones), Hostinger (Hosting).
+🎯 OBJETIVO DEL ARCHIVO DE MEMORIA
+AGENTE: Debes guardar este contenido íntegro en un archivo llamado instrucciones_proyecto.txt en la raíz. Cada vez que iniciemos una sesión o haya dudas, consulta este archivo. Es la única fuente de verdad del proyecto.
+________________________________________
+🛠️ ESPECIFICACIONES TÉCNICAS Y LÓGICA
+1.	Cuentas Maestras y Suscripción:
+o	Programador (Free de por vida): prueba_tiendaropa2026@hotmail.com / Prueba_tiendaropa2026.
+o	Cliente Premium ($130.000/mes): cache_tienda2026@hotmail.com / Cache_tienda2026. Este usuario NO debe ver la opción de $40.000.
+o	Cliente Estándar ($40.000/mes): Registro común con 30 días de prueba.
+2.	Interfaz y Diseño:
+o	Colores: Negro, Gris, Blanco y Azul (detalles).
+o	Estilo: Botones con poco borde (semi-rectos), con sombras para profundidad.
+o	Icono: Traje negro, fondo blanco, texto "Straje.App" debajo en un recuadro.
+3.	Roles:
+o	Dueño/Administrador: Control total, visualización de costos, creación de hasta 3 empleados gratis, reportes contables, borrado de historial.
+o	Empleado: Solo ventas y stock. No ve costos ni utilidades. Descuentos limitados por el dueño (ej. tope del 20%).
+________________________________________
+🚀 PLAN DE DESARROLLO (20 ETAPAS)
+1.	Etapa 1: Estructura Inicial. Setup de Vite, React y configuración de Tailwind para los colores de la marca.
+2.	Etapa 2: Base de Datos. Configuración de tablas en Supabase (Empresas, Usuarios, Stock, Alquileres, Ventas, Caja).
+3.	Etapa 3: Sistema de Auth. Registro y Login diferenciando Dueño y Empleado.
+4.	Etapa 4: Lógica de Suscripción. Implementación de los 30 días de prueba y reglas para cuentas Maestras (Programador/Premium).
+5.	Etapa 5: Gestión de Empleados. Panel para que el dueño cree sus 3 cuentas de empleado con permisos.
+6.	Etapa 6: Módulo de Alquileres (Core). Interfaz de selección de trajes/vestidos con talles (T40 a T46+).
+7.	Etapa 7: Calendario de Alquiler. Sistema de reserva y selección de días de préstamo.
+8.	Etapa 8: Semáforo de Devolución. Lógica de colores (Verde, Amarillo, Rojo) según fecha de entrega.
+9.	Etapa 9: WhatsApp Automático. Integración para avisos de vencimiento de alquiler.
+10.	Etapa 10: Control de Stock. Carga de productos con Código, Marca, Talle, Costo y Alerta de falta.
+11.	Etapa 11: Algoritmo de Precios. Cálculo automático de % de ganancia y precio efectivo vs tarjeta.
+12.	Etapa 12: Módulo de Reservas. Estado "Celeste Fuerte" para prendas apartadas con control de señas.
+13.	Etapa 13: Pantalla Principal de Ventas. Buscador de stock, carrito y confirmación de compra.
+14.	Etapa 14: Gestión de Pagos. Lógica de cuotas con recargo personalizable y descuentos por efectivo.
+15.	Etapa 15: Caja Diaria. Registro de entradas/salidas, cierre de caja y diferenciación de cajero (Dueño/Empleado).
+16.	Etapa 16: Historial de Movimientos. Auditoría detallada (quién hizo qué y a qué hora).
+17.	Etapa 17: Contabilidad General. Balance diario, mensual y anual. Gráficos de ingresos vs egresos.
+18.	Etapa 18: Reportes Inteligentes. Botón de "Pedido de prendas" y lista de "Prendas sin movimiento" (30 días).
+19.	Etapa 19: Configuración PWA. Service Worker, Manifest e ícono para que sea instalable en Android/iOS/PC.
+20.	Etapa 20: Despliegue Final. Subida a Hostinger, configuración de .htaccess y pruebas finales de producción.
