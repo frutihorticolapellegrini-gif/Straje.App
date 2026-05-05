@@ -24,7 +24,7 @@ export const HistorialStock = () => {
           usuario:usuario_id(nombre)
         `)
         .eq('empresa_id', profile?.empresa_id)
-        .order('fecha_movimiento', { ascending: false }) // <--- Columna corregida
+        .order('creado_en', { ascending: false })
 
       if (error) throw error
       setMovimientos(data || [])
@@ -98,8 +98,8 @@ export const HistorialStock = () => {
                 filteredMovimientos.map(mov => (
                   <tr key={mov.id} className="hover:bg-brand-lightGray/30 transition-all">
                     <td className="p-4">
-                      <p className="text-[10px] font-black text-brand-black">{new Date(mov.fecha_movimiento).toLocaleDateString()}</p>
-                      <p className="text-[9px] text-brand-gray font-bold">{new Date(mov.fecha_movimiento).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs</p>
+                      <p className="text-[10px] font-black text-brand-black">{new Date(mov.creado_en).toLocaleDateString()}</p>
+                      <p className="text-[9px] text-brand-gray font-bold">{new Date(mov.creado_en).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}hs</p>
                     </td>
                     <td className="p-4">
                       <span className="font-black text-brand-blue text-xs uppercase bg-brand-blue/5 px-2 py-1 rounded">

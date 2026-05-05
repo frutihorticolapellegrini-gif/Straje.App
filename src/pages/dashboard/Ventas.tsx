@@ -28,6 +28,7 @@ export const Ventas = () => {
   const [ventas, setVentas] = useState<Venta[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
   const [isFormOpen, setIsFormOpen] = useState(false)
 
   useEffect(() => {
@@ -100,10 +101,16 @@ export const Ventas = () => {
   const filteredVentas = ventas.filter(v => {
     const term = searchTerm.toLowerCase()
     const codesString = v.detalles?.map(d => d.prenda?.codigo).join(' ') || ''
-    return (
+    
+    // Parsear fecha para comparar con el filtro de YYYY-MM-DD
+    const vDate = new Date(v.creado_en).toLocaleDateString('sv-SE') // Formato YYYY-MM-DD en zona local
+    const matchesDate = filterDate ? vDate === filterDate : true
+
+    const matchesSearch = 
       (v.cliente_nombre && v.cliente_nombre.toLowerCase().includes(term)) ||
       codesString.toLowerCase().includes(term)
-    )
+
+    return matchesDate && matchesSearch
   })
 
   return (
@@ -124,8 +131,8 @@ export const Ventas = () => {
         </button>
       </header>
 
-      <div className="bg-white p-4 rounded-semi shadow-xl border border-brand-gray/10">
-        <div className="relative">
+      <div className="bg-white p-4 rounded-semi shadow-xl border border-brand-gray/10 flex flex-col md:flex-row gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={20} />
           <input 
             type="text" 
@@ -133,6 +140,14 @@ export const Ventas = () => {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue uppercase tracking-tighter"
+          />
+        </div>
+        <div className="w-full md:w-auto">
+          <input 
+            type="date"
+            value={filterDate}
+            onChange={(e) => setFilterDate(e.target.value)}
+            className="w-full md:w-auto px-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue text-brand-black cursor-pointer"
           />
         </div>
       </div>

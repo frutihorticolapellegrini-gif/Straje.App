@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext'
 import { Plus, Search, Edit, BarChart2, Package } from 'lucide-react'
 import { StockForm } from '../../components/stock/StockForm'
 import { StockTotalsModal } from '../../components/stock/StockTotalsModal'
+import { PedidoSugeridoModal } from '../../components/stock/PedidoSugeridoModal'
 import { formatMoney } from '../../utils/formatters'
 
 export interface Prenda {
@@ -34,6 +35,7 @@ export const Stock = () => {
   const [activeTab, setActiveTab] = useState('Todos')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isTotalsOpen, setIsTotalsOpen] = useState(false) // Punto 14
+  const [isPedidoSugeridoOpen, setIsPedidoSugeridoOpen] = useState(false)
   const [editingPrenda, setEditingPrenda] = useState<Prenda | null>(null)
 
   useEffect(() => {
@@ -112,12 +114,20 @@ export const Stock = () => {
         </div>
         <div className="flex gap-2 w-full md:w-auto">
           {isDueno && (
-            <button 
-              onClick={() => setIsTotalsOpen(true)}
-              className="flex-1 md:flex-none px-6 py-3 bg-brand-black text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-brand-gray transition-all uppercase text-xs tracking-widest shadow-xl border-b-4 border-brand-blue"
-            >
-              <BarChart2 size={18} /> Balance Total
-            </button>
+            <>
+              <button 
+                onClick={() => setIsTotalsOpen(true)}
+                className="flex-1 md:flex-none px-6 py-3 bg-brand-black text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-brand-gray transition-all uppercase text-xs tracking-widest shadow-xl border-b-4 border-brand-blue"
+              >
+                <BarChart2 size={18} /> Balance Total
+              </button>
+              <button 
+                onClick={() => setIsPedidoSugeridoOpen(true)}
+                className="flex-1 md:flex-none px-6 py-3 bg-[#009EE3] text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all uppercase text-xs tracking-widest shadow-xl border-b-4 border-blue-800"
+              >
+                Armar Pedido
+              </button>
+            </>
           )}
           <button 
             onClick={() => { setEditingPrenda(null); setIsFormOpen(true) }}
@@ -175,8 +185,12 @@ export const Stock = () => {
             ) : filteredStock.length === 0 ? (
               <tr><td colSpan={8} className="p-12 text-center text-brand-gray font-black uppercase text-xs tracking-widest italic">No se encontraron prendas</td></tr>
             ) : (
-              filteredStock.map(prenda => (
-                <tr key={prenda.id} className="hover:bg-brand-lightGray/30 transition-all group">
+              filteredStock.map(prenda => {
+                const stockMinimo = prenda.atributos_extra?.stock_minimo || 0;
+                const isAlertaStock = stockMinimo > 0 && prenda.disponibles <= stockMinimo;
+
+                return (
+                <tr key={prenda.id} className={`hover:bg-brand-lightGray/30 transition-all group ${isAlertaStock ? 'bg-red-50/50' : ''}`}>
                   <td className="p-4 font-black text-brand-black font-mono text-sm uppercase tracking-tighter">
                     {prenda.codigo}
                   </td>
@@ -198,10 +212,11 @@ export const Stock = () => {
                   </td>
                   <td className="p-4 text-center">
                     <div className="flex flex-col items-center">
-                      <span className={`font-black text-lg tracking-tighter ${prenda.disponibles === 0 ? 'text-red-500' : 'text-brand-black'}`}>
+                      <span className={`font-black text-lg tracking-tighter ${prenda.disponibles === 0 || isAlertaStock ? 'text-red-600' : 'text-brand-black'}`}>
                         {prenda.disponibles}
                       </span>
                       <p className="text-[9px] text-brand-gray font-black uppercase tracking-tighter">de {prenda.unidades} tot.</p>
+                      {isAlertaStock && <p className="text-[9px] text-red-600 font-black uppercase tracking-widest mt-1 animate-pulse">¡Stock Bajo!</p>}
                     </div>
                   </td>
                   <td className="p-4 text-right font-black text-brand-blue text-sm">
@@ -227,7 +242,8 @@ export const Stock = () => {
                     </div>
                   </td>
                 </tr>
-              ))
+                )
+              })
             )}
           </tbody>
         </table>
@@ -239,6 +255,10 @@ export const Stock = () => {
       
       {isTotalsOpen && (
         <StockTotalsModal prendas={prendas} onClose={() => setIsTotalsOpen(false)} />
+      )}
+      
+      {isPedidoSugeridoOpen && (
+        <PedidoSugeridoModal prendas={prendas} onClose={() => setIsPedidoSugeridoOpen(false)} />
       )}
     </div>
   )

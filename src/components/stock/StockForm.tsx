@@ -44,6 +44,7 @@ export const StockForm: React.FC<StockFormProps> = ({ prenda, categoriasExistent
   const [isSoloVenta, setIsSoloVenta] = useState(prenda ? prenda.precio_alquiler === 0 : false)
   // En edición, cantidad representa el nuevo TOTAL deseado (Punto 3)
   const [unidadesTotal, setUnidadesTotal] = useState(prenda?.unidades || 1)
+  const [stockMinimo, setStockMinimo] = useState(prenda?.atributos_extra?.stock_minimo || 2)
 
   const defaultCategorias = ['Traje', 'Vestido', 'Remera', 'Pantalón', 'Camisa', 'Zapatos', 'Zapatillas']
   const allCategorias = Array.from(new Set([...defaultCategorias, ...categoriasExistentes])).sort()
@@ -104,7 +105,8 @@ export const StockForm: React.FC<StockFormProps> = ({ prenda, categoriasExistent
         precio_venta: formData.precio_venta ? parseToNumber(formData.precio_venta) : null,
         estado: formData.estado,
         unidades: unidadesTotal,
-        disponibles: isEditing ? (prenda.disponibles + (unidadesTotal - prenda.unidades)) : unidadesTotal
+        disponibles: isEditing ? (prenda.disponibles + (unidadesTotal - prenda.unidades)) : unidadesTotal,
+        atributos_extra: { ...(prenda?.atributos_extra || {}), stock_minimo: stockMinimo }
       }
 
       let prendaId = prenda?.id;
@@ -192,7 +194,7 @@ export const StockForm: React.FC<StockFormProps> = ({ prenda, categoriasExistent
               <div className="flex gap-2">
                 <input type="text" name="codigo" value={formData.codigo} onChange={handleChange} placeholder="AUTO"
                   className="w-full px-3 py-2 border border-brand-gray/30 rounded-semi focus:border-brand-blue outline-none uppercase" />
-                <div className="w-32 shrink-0">
+                <div className="w-24 shrink-0">
                   <input 
                     type="number" 
                     min="1"
@@ -200,7 +202,17 @@ export const StockForm: React.FC<StockFormProps> = ({ prenda, categoriasExistent
                     onChange={e => setUnidadesTotal(Number(e.target.value))}
                     className="w-full px-3 py-2 border border-brand-blue/50 bg-brand-blue/5 rounded-semi focus:outline-none focus:border-brand-blue text-center font-bold text-brand-blue text-sm"
                   />
-                  <p className="text-[9px] text-center text-brand-blue font-bold uppercase mt-1">Unidades Totales</p>
+                  <p className="text-[8px] text-center text-brand-blue font-bold uppercase mt-1">Total</p>
+                </div>
+                <div className="w-24 shrink-0">
+                  <input 
+                    type="number" 
+                    min="0"
+                    value={stockMinimo}
+                    onChange={e => setStockMinimo(Number(e.target.value))}
+                    className="w-full px-3 py-2 border border-orange-300 bg-orange-50 rounded-semi focus:outline-none focus:border-orange-500 text-center font-bold text-orange-600 text-sm"
+                  />
+                  <p className="text-[8px] text-center text-orange-600 font-bold uppercase mt-1">Mínimo</p>
                 </div>
               </div>
             </div>

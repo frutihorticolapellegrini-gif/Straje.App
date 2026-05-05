@@ -44,8 +44,19 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
     } catch (err) { console.error(err) }
   }
 
-  const addToCart = (prenda: Prenda) => { if (carrito.find(p => p.id === prenda.id)) return; setCarrito([...carrito, prenda]); setSearchTerm('') }
-  const removeFromCart = (prendaId: string) => { setCarrito(carrito.filter(p => p.id !== prendaId)) }
+  const addToCart = (prenda: Prenda) => { 
+    const qtyInCart = carrito.filter(p => p.id === prenda.id).length;
+    if (qtyInCart >= (prenda.disponibles || 0)) {
+      alert("No hay más stock disponible de esta prenda");
+      return;
+    }
+    setCarrito([...carrito, prenda]); 
+    setSearchTerm('');
+  }
+  
+  const removeFromCart = (indexToRemove: number) => { 
+    setCarrito(carrito.filter((_, i) => i !== indexToRemove));
+  }
 
   const subtotal = carrito.reduce((acc, p) => acc + (p.precio_alquiler || 0), 0)
   const dPorc = parseFloat(descuentoPorcentaje) || 0
@@ -74,7 +85,14 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
       if (alqErr) throw alqErr
       for (const p of carrito) {
         await supabase.from('alquiler_detalles').insert({ alquiler_id: alq.id, prenda_id: p.id, precio_unitario: p.precio_alquiler || 0 })
-        await supabase.rpc('decrement_disponibles', { prenda_id: p.id })
+        
+        // Obtener stock actual para restar disponibles con seguridad
+        const { data: stockActual } = await supabase.from('stock').select('disponibles, estado').eq('id', p.id).single();
+        if (stockActual) {
+          const newDisponibles = Math.max(0, stockActual.disponibles - 1);
+          const nuevoEstado = newDisponibles === 0 ? 'alquilado' : stockActual.estado;
+          await supabase.from('stock').update({ disponibles: newDisponibles, estado: nuevoEstado }).eq('id', p.id);
+        }
         await supabase.from('historial_stock').insert({ empresa_id: profile?.empresa_id, prenda_id: p.id, tipo_movimiento: 'salida', cantidad: -1, motivo: `Alquiler: ${formData.cliente_nombre}`, usuario_id: profile?.id })
       }
       
@@ -107,6 +125,31 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
     const win = window.open('', '', 'width=600,height=800'); win?.document.write(html); win?.document.close(); win?.focus(); setTimeout(() => { win?.print(); }, 500)
   }
 
+  const generateWhatsAppMessage = () => {
+    if (!successData) return '';
+    const printNum = (parseInt(localStorage.getItem('straje_print_count') || '0')).toString().padStart(2, '0');
+    const nombreNegocio = empresa?.nombre?.toUpperCase() || 'STRAJE.APP';
+    const saldo = total - (successData?.abonado || 0);
+    
+    let msg = `*REMITO ALQUILER #${printNum}*\n`;
+    msg += `*${nombreNegocio}*\n`;
+    msg += `-----------------------------------\n`;
+    msg += `*Retiro:* ${new Date(formData.fecha_retiro).toLocaleDateString()}\n`;
+    msg += `*Devolución:* ${new Date(formData.fecha_devolucion).toLocaleDateString()}\n`;
+    msg += `-----------------------------------\n`;
+    msg += `*Detalle:*\n`;
+    successData.prendas.forEach(p => {
+      msg += `- [${p.codigo}] ${p.tipo}: ${formatMoney(p.precio_alquiler)}\n`;
+    });
+    msg += `-----------------------------------\n`;
+    msg += `*TOTAL ALQUILER:* ${formatMoney(total)}\n`;
+    msg += `*PAGADO HOY:* ${formatMoney(successData.abonado)}\n`;
+    if (saldo > 0) msg += `*SALDO PENDIENTE:* ${formatMoney(saldo)}\n`;
+    msg += `\n_¡Gracias por elegirnos!_`;
+    
+    return msg;
+  }
+
   return (
     <div className="fixed inset-0 bg-brand-black/70 backdrop-blur-md flex items-center justify-center p-2 z-50">
       <div className="bg-brand-white rounded-semi shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto flex flex-col border border-white/20">
@@ -116,7 +159,7 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
             <h2 className="text-4xl font-black text-brand-black uppercase italic tracking-tighter">¡Reserva Exitosa!</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-sm mx-auto">
               <button onClick={handlePrint} className="flex items-center justify-center gap-2 bg-brand-black text-white font-black py-4 rounded-semi hover:bg-brand-gray transition-all shadow-xl uppercase text-xs tracking-widest"><Printer size={20} /> Imprimir Remito</button>
-              <button onClick={() => window.open(`https://wa.me/${formData.cliente_telefono?.replace(/\D/g,'')}?text=RESERVA: ${formatMoney(total)}`, '_blank')} className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-4 rounded-semi hover:bg-[#1ebd5a] transition-all shadow-xl uppercase text-xs tracking-widest"><MessageCircle size={20} /> WhatsApp</button>
+              <button onClick={() => window.open(`https://wa.me/${formData.cliente_telefono?.replace(/\D/g,'')}?text=${encodeURIComponent(generateWhatsAppMessage())}`, '_blank')} className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-4 rounded-semi hover:bg-[#1ebd5a] transition-all shadow-xl uppercase text-xs tracking-widest"><MessageCircle size={20} /> WhatsApp</button>
             </div>
             <button onClick={onClose} className="px-10 py-3 bg-brand-lightGray text-brand-gray font-black rounded-semi uppercase text-xs">Cerrar</button>
           </div>
@@ -140,7 +183,14 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
                   <div className="relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={22} /><input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="w-full pl-12 pr-4 py-4 bg-brand-lightGray border-none rounded-semi font-black outline-none uppercase text-sm shadow-inner" placeholder="CÓDIGO O TIPO..." /></div>
                   {searchTerm && (
                     <div className="bg-white shadow-2xl rounded-semi mt-2 border border-brand-gray/10 z-20 overflow-hidden">
-                      {availableStock.filter(p => !carrito.some(c => c.id === p.id) && (p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) || p.tipo.toLowerCase().includes(searchTerm.toLowerCase()))).slice(0, 5).map(prenda => (
+                      {availableStock
+                        .filter(p => {
+                          const qtyInCart = carrito.filter(c => c.id === p.id).length;
+                          return (p.disponibles || 0) > qtyInCart && 
+                                 (p.codigo.toLowerCase().includes(searchTerm.toLowerCase()) || p.tipo.toLowerCase().includes(searchTerm.toLowerCase()));
+                        })
+                        .slice(0, 5)
+                        .map(prenda => (
                         <button key={prenda.id} onClick={() => addToCart(prenda)} className="w-full p-4 flex justify-between items-center hover:bg-brand-blue/5 border-b last:border-0 transition-colors"><div className="text-left"><p className="font-black text-xs uppercase">{prenda.codigo} - {prenda.tipo}</p></div><p className="font-black text-brand-blue text-lg">{formatMoney(prenda.precio_alquiler)}</p></button>
                       ))}
                     </div>
@@ -150,8 +200,8 @@ export const AlquilerForm: React.FC<AlquilerFormProps> = ({ onClose, onSave }) =
               <div className="flex flex-col bg-brand-lightGray/40 p-4 rounded-semi border border-brand-gray/10 shadow-inner">
                 <h4 className="text-xs font-black uppercase tracking-widest text-brand-black mb-2 border-b pb-2">Resumen de Alquiler</h4>
                 <div className="flex-1 space-y-2 max-h-[130px] overflow-y-auto pr-2 custom-scrollbar">
-                  {carrito.map(p => (
-                    <div key={p.id} className="flex justify-between items-center bg-white p-4 rounded-semi shadow-md border border-brand-gray/5"><div><p className="font-black text-xs uppercase italic">{p.codigo} - {p.tipo}</p><p className="text-xs text-brand-blue font-black">{formatMoney(p.precio_alquiler)}</p></div><button onClick={() => removeFromCart(p.id)} className="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-full"><Trash2 size={18} /></button></div>
+                  {carrito.map((p, i) => (
+                    <div key={i} className="flex justify-between items-center bg-white p-4 rounded-semi shadow-md border border-brand-gray/5"><div><p className="font-black text-xs uppercase italic">{p.codigo} - {p.tipo}</p><p className="text-xs text-brand-blue font-black">{formatMoney(p.precio_alquiler)}</p></div><button onClick={() => removeFromCart(i)} className="text-red-400 hover:text-red-600 p-2 bg-red-50 rounded-full"><Trash2 size={18} /></button></div>
                   ))}
                 </div>
                 <div className="mt-3 space-y-3">

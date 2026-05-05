@@ -204,7 +204,7 @@ export const Config = () => {
                     <p className="text-[10px] text-white/70 font-black uppercase">Suscripción Premium</p>
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-black uppercase text-white/70">Costo:</span>
-                      <span className="text-xl font-black text-brand-blue">$130.000<span className="text-xs font-normal text-white/50">/mes</span></span>
+                      <span className="text-xl font-black text-brand-blue">$80.000<span className="text-xs font-normal text-white/50">/mes</span></span>
                     </div>
                     <p className="text-[9px] text-white/40 font-bold uppercase">Débito automático · Mercado Pago</p>
                     <button

@@ -30,6 +30,7 @@ export const Alquileres = () => {
   const [alquileres, setAlquileres] = useState<Alquiler[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterEstado, setFilterEstado] = useState<'activos' | 'finalizados' | 'atrasados'>('activos')
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [devolucionAlquiler, setDevolucionAlquiler] = useState<Alquiler | null>(null)
 
@@ -65,10 +66,20 @@ export const Alquileres = () => {
   const filteredAlquileres = alquileres.filter(a => {
     const term = searchTerm.toLowerCase()
     const codesString = a.detalles?.map(d => d.prenda?.codigo).join(' ') || ''
-    return (
-      a.cliente_nombre.toLowerCase().includes(term) ||
-      codesString.toLowerCase().includes(term)
-    )
+    const matchesSearch = a.cliente_nombre.toLowerCase().includes(term) || codesString.toLowerCase().includes(term)
+
+    if (!matchesSearch) return false;
+
+    if (filterEstado === 'finalizados') {
+      return a.estado === 'devuelto';
+    } else if (filterEstado === 'atrasados') {
+      const hoy = new Date(); hoy.setHours(0,0,0,0);
+      const fechaDev = new Date(a.fecha_devolucion); fechaDev.setHours(0,0,0,0);
+      return a.estado !== 'devuelto' && fechaDev.getTime() < hoy.getTime();
+    } else {
+      // Activos
+      return a.estado !== 'devuelto';
+    }
   })
 
   const getSemaforoBadge = (alquiler: Alquiler) => {
@@ -122,7 +133,16 @@ export const Alquileres = () => {
         </button>
       </header>
 
-      <div className="bg-brand-white p-4 rounded-t-semi border-b border-brand-gray/10 flex justify-end">
+      <div className="bg-brand-white p-4 rounded-t-semi border-b border-brand-gray/10 flex flex-col md:flex-row justify-end gap-4">
+        <select 
+          value={filterEstado}
+          onChange={(e) => setFilterEstado(e.target.value as any)}
+          className="px-4 py-2 bg-brand-lightGray border-none rounded-semi font-bold outline-none text-brand-black cursor-pointer text-sm"
+        >
+          <option value="activos">En Espera (Activos)</option>
+          <option value="atrasados">Atrasados (En Rojo)</option>
+          <option value="finalizados">Finalizados (Devueltos)</option>
+        </select>
         <div className="relative w-full md:w-64">
           <input 
             type="text" 

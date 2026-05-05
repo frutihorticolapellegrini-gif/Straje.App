@@ -6,21 +6,27 @@ import { supabase } from '../lib/supabase'
 export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { empresa, profile, signOut } = useAuth()
 
-  // EXCEPCIÓN PARA EL PROGRAMADOR Y USUARIOS PREMIUM EXISTENTES
+  // EXCEPCIÓN PARA EL PROGRAMADOR Y USUARIOS PREMIUM EXISTENTES (Excepto cache_tienda para forzar suscripción en 30 días)
   if (
     profile?.email === 'prueba_tiendaropa2026@hotmail.com' || 
     profile?.rol === 'programador' || 
     empresa?.plan === 'programador' || 
-    empresa?.plan === 'premium'
+    (empresa?.plan === 'premium' && profile?.email !== 'cache_tienda2026@hotmail.com')
   ) {
     return <>{children}</>
   }
 
-  // Cliente Estándar: Verificación de 30 días
+  // Cliente Estándar y Cache Tienda: Verificación de 30 días
   const today = new Date()
-  const finPrueba = empresa?.fecha_fin_prueba ? new Date(empresa.fecha_fin_prueba) : new Date()
-  const diffTime = finPrueba.getTime() - today.getTime()
-  const diffDays = Math.ceil(diffTime / (1000 * 3600 * 24))
+  
+  let diffDays = 0;
+  if (profile?.email === 'cache_tienda2026@hotmail.com') {
+    const cacheEndDate = new Date('2026-06-04T00:00:00-03:00'); // 30 días a partir de hoy (05-05-2026)
+    diffDays = Math.ceil((cacheEndDate.getTime() - today.getTime()) / (1000 * 3600 * 24));
+  } else {
+    const finPrueba = empresa?.fecha_fin_prueba ? new Date(empresa.fecha_fin_prueba) : new Date();
+    diffDays = Math.ceil((finPrueba.getTime() - today.getTime()) / (1000 * 3600 * 24));
+  }
 
   // Si está inactiva o caducó (diffDays <= 0)
   if (!empresa?.activa || diffDays < 0) {
@@ -50,7 +56,7 @@ export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ chi
               <li className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-500" /> 
                 {profile?.email === 'cache_tienda2026@hotmail.com'
-                  ? 'Suscripción Premium: $130.000/mes · Débito automático Mercado Pago'
+                  ? 'Suscripción Premium: $80.000/mes · Débito automático Mercado Pago'
                   : 'Valor: $40.000 / mes'}
               </li>
               <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-green-500" /> Soporte incluido</li>
@@ -97,5 +103,18 @@ export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ chi
     )
   }
 
-  return <>{children}</>
+  return (
+    <>
+      {diffDays >= 0 && (
+        <div className="bg-red-500 text-white text-center py-2 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-2">
+          <AlertTriangle size={14} />
+          {profile?.email === 'cache_tienda2026@hotmail.com' 
+            ? `Atención: Quedan ${diffDays} días para activar tu Suscripción Premium obligatoria.`
+            : `Prueba de sistema: Quedan ${diffDays} días para que tu cuenta sea bloqueada. ¡Suscríbete ahora!`
+          }
+        </div>
+      )}
+      {children}
+    </>
+  )
 }
