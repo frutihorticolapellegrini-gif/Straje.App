@@ -15,6 +15,8 @@ export default {
           white: '#ffffff',
           blue: '#2563eb', // Accent color (Celeste/Azul)
           blueHover: '#1d4ed8',
+          orange: '#f97316', // Orange for Cta Cte
+          violet: '#8b5cf6', // Violet for Condicional
         }
       },
       borderRadius: {

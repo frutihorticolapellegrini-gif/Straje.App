@@ -5,7 +5,10 @@ import { Plus, Search, Edit, BarChart2, Package } from 'lucide-react'
 import { StockForm } from '../../components/stock/StockForm'
 import { StockTotalsModal } from '../../components/stock/StockTotalsModal'
 import { PedidoSugeridoModal } from '../../components/stock/PedidoSugeridoModal'
+import { ImpresionPreciosModal } from '../../components/stock/ImpresionPreciosModal'
+import { AjustePrecioModal } from '../../components/stock/AjustePrecioModal'
 import { formatMoney } from '../../utils/formatters'
+import { Printer, TrendingUp } from 'lucide-react'
 
 export interface Prenda {
   id: string
@@ -34,8 +37,10 @@ export const Stock = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [activeTab, setActiveTab] = useState('Todos')
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isTotalsOpen, setIsTotalsOpen] = useState(false) // Punto 14
+  const [isTotalsOpen, setIsTotalsOpen] = useState(false)
   const [isPedidoSugeridoOpen, setIsPedidoSugeridoOpen] = useState(false)
+  const [isPrintPreciosOpen, setIsPrintPreciosOpen] = useState(false)
+  const [isAjustePrecioOpen, setIsAjustePrecioOpen] = useState(false)
   const [editingPrenda, setEditingPrenda] = useState<Prenda | null>(null)
 
   useEffect(() => {
@@ -103,6 +108,62 @@ export const Stock = () => {
     }
   }
 
+  const handleImprimirInventario = () => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+
+    const html = `
+      <html>
+        <head>
+          <title>INVENTARIO - STRAJE.APP</title>
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { font-family: 'Arial', sans-serif; text-transform: uppercase; font-size: 10px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+            th { background-color: #f0f0f0; font-weight: bold; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+            h1 { margin: 0; font-size: 18px; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="header">
+            <h1>STRAJE.APP - REPORTE DE INVENTARIO</h1>
+            <p>FECHA: ${new Date().toLocaleDateString()} - FILTRO: ${activeTab}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>COD.</th>
+                <th>TIPO</th>
+                <th>MARCA</th>
+                <th>TALLE</th>
+                <th>ESTADO</th>
+                <th>DISP.</th>
+                <th>ALQUILER</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredStock.map(p => `
+                <tr>
+                  <td>${p.codigo}</td>
+                  <td>${p.tipo}</td>
+                  <td>${p.marca || ''}</td>
+                  <td>${p.talle}</td>
+                  <td>${p.estado}</td>
+                  <td>${p.disponibles}</td>
+                  <td>$${p.precio_alquiler.toLocaleString()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+    printWindow.document.write(html)
+    printWindow.document.close()
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-6">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -131,9 +192,30 @@ export const Stock = () => {
           )}
           <button 
             onClick={() => { setEditingPrenda(null); setIsFormOpen(true) }}
-            className="flex-1 md:flex-none px-6 py-3 bg-brand-blue text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-blue-600 shadow-xl shadow-brand-blue/30 transition-all uppercase text-xs tracking-widest"
+            className="flex-1 md:flex-none px-4 py-2 bg-brand-blue text-white rounded-semi font-black flex items-center justify-center gap-1 hover:bg-blue-600 shadow-xl shadow-brand-blue/30 transition-all uppercase text-[10px] tracking-tighter"
           >
-            <Plus size={18} /> Nueva Prenda
+            <Plus size={14} /> Nueva
+          </button>
+          <button 
+            onClick={() => setIsPrintPreciosOpen(true)}
+            className="flex-1 md:flex-none px-4 py-2 bg-white text-brand-black border-2 border-brand-black rounded-semi font-black flex items-center justify-center gap-1 hover:bg-brand-lightGray transition-all uppercase text-[10px] tracking-tighter"
+          >
+            <Printer size={14} /> Precios
+          </button>
+          {isDueno && (
+            <button 
+              onClick={() => setIsAjustePrecioOpen(true)}
+              className="flex-1 md:flex-none px-4 py-2 bg-amber-500 text-white rounded-semi font-black flex items-center justify-center gap-1 hover:bg-amber-600 transition-all uppercase text-[10px] tracking-tighter shadow-lg border-b-2 border-amber-700"
+            >
+              <TrendingUp size={14} /> Aumento/Baja
+            </button>
+          )}
+          <button 
+            onClick={handleImprimirInventario}
+            className="flex-1 md:flex-none p-2 bg-brand-lightGray text-brand-black rounded-semi hover:bg-brand-gray/20 transition-all"
+            title="Imprimir Tabla Actual"
+          >
+            <Printer size={14} />
           </button>
         </div>
       </header>
@@ -259,6 +341,19 @@ export const Stock = () => {
       
       {isPedidoSugeridoOpen && (
         <PedidoSugeridoModal prendas={prendas} onClose={() => setIsPedidoSugeridoOpen(false)} />
+      )}
+      
+      {isPrintPreciosOpen && (
+        <ImpresionPreciosModal prendas={prendas} onClose={() => setIsPrintPreciosOpen(false)} />
+      )}
+
+      {isAjustePrecioOpen && (
+        <AjustePrecioModal 
+          prendas={prendas} 
+          empresaId={profile?.empresa_id || ''} 
+          onClose={() => setIsAjustePrecioOpen(false)} 
+          onSuccess={fetchStock} 
+        />
       )}
     </div>
   )

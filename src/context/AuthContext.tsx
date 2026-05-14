@@ -25,7 +25,8 @@ interface UserProfile {
     puede_ver_historial?: boolean
     puede_cargar_stock?: boolean
     puede_cancelar_ventas?: boolean
-    puede_ver_inventario?: boolean // <--- Agregado formalmente
+    puede_ver_inventario?: boolean
+    [key: string]: any // Permite claves dinámicas para módulos
   }
   activo: boolean
 }

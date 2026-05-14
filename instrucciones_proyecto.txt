@@ -6,7 +6,7 @@ ________________________________________
 🛠️ ESPECIFICACIONES TÉCNICAS Y LÓGICA
 1.	Cuentas Maestras y Suscripción:
 o	Programador (Free de por vida): prueba_tiendaropa2026@hotmail.com / Prueba_tiendaropa2026.
-o	Cliente Premium ($130.000/mes): cache_tienda2026@hotmail.com / Cache_tienda2026. Este usuario NO debe ver la opción de $40.000.
+o	Cliente Premium ($80.000/mes): cache_tienda2026@hotmail.com / Cache_tienda2026. Este usuario NO debe ver la opción de $40.000.
 o	Cliente Estándar ($40.000/mes): Registro común con 30 días de prueba.
 2.	Interfaz y Diseño:
 o	Colores: Negro, Gris, Blanco y Azul (detalles).

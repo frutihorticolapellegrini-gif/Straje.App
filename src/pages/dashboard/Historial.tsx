@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Calendar, Filter, FileText, ArrowUpRight, ArrowDownRight, Scale, CreditCard } from 'lucide-react'
+import { Calendar, Filter, FileText, ArrowUpRight, ArrowDownRight, Scale, CreditCard, Printer } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
 export const Historial = () => {
@@ -61,6 +61,62 @@ export const Historial = () => {
     } catch (err) { console.error(err) } finally { setLoading(false) }
   }
 
+  const handleImprimirHistorial = () => {
+    const printWindow = window.open('', '_blank')
+    if (!printWindow) return
+    const html = `
+      <html>
+        <head>
+          <title>REPORTE DE CAJA - STRAJE.APP</title>
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { font-family: 'Arial', sans-serif; text-transform: uppercase; font-size: 9px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+            th { background-color: #f0f0f0; }
+            .summary { margin: 20px 0; padding: 10px; border: 2px solid #000; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="header">
+            <h1>STRAJE.APP - REPORTE DE CAJA</h1>
+            <p>PERIODO: ${fechaDesde} AL ${fechaHasta}</p>
+          </div>
+          <div class="summary">
+            <p><strong>TOTAL INGRESOS:</strong> ${formatMoney(totalIngresos)}</p>
+            <p><strong>TOTAL EGRESOS:</strong> ${formatMoney(totalEgresos)}</p>
+            <p><strong>SALDO NETO:</strong> ${formatMoney(saldoNeto)}</p>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>FECHA</th>
+                <th>CONCEPTO</th>
+                <th>METODO</th>
+                <th>TIPO</th>
+                <th>MONTO</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${movimientos.map(m => `
+                <tr>
+                  <td>${new Date(m.fecha_movimiento).toLocaleDateString()}</td>
+                  <td>${m.concepto}</td>
+                  <td>${m.metodo_pago}</td>
+                  <td>${m.tipo}</td>
+                  <td>${formatMoney(m.monto)}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `
+    printWindow.document.write(html)
+    printWindow.document.close()
+  }
+
   const totalIngresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((acc, m) => acc + m.monto, 0)
   const totalEgresos = movimientos.filter(m => m.tipo === 'egreso').reduce((acc, m) => acc + m.monto, 0)
   const saldoNeto = totalIngresos - totalEgresos
@@ -73,6 +129,15 @@ export const Historial = () => {
             <FileText className="text-brand-blue" size={32} /> Historial General de Caja
           </h2>
           <p className="text-brand-gray font-bold text-sm uppercase tracking-wider">Balance global y auditoría de todos los movimientos.</p>
+        </div>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleImprimirHistorial}
+            className="p-3 bg-white text-brand-black border-2 border-brand-black rounded-semi hover:bg-brand-lightGray transition-all"
+            title="Imprimir Historial"
+          >
+            <Printer size={20} />
+          </button>
         </div>
       </header>
 

@@ -34,13 +34,14 @@ export const Caja = () => {
   const fetchMovimientosPostCierre = async () => {
     setLoading(true)
     try {
-      const { data: ultimoCierre } = await supabase
+      const { data: cierres } = await supabase
         .from('cierres_diarios')
         .select('fecha_cierre')
         .eq('empresa_id', profile?.empresa_id)
         .order('fecha_cierre', { ascending: false })
         .limit(1)
-        .single()
+      
+      const ultimoCierre = cierres && cierres.length > 0 ? cierres[0] : null
 
       const fechaReferencia = ultimoCierre?.fecha_cierre || new Date(new Date().setHours(0,0,0,0)).toISOString()
 
@@ -152,7 +153,12 @@ export const Caja = () => {
                         <span className="px-2 py-1 bg-brand-lightGray text-brand-gray rounded text-[9px] font-black uppercase border border-brand-gray/10">{mov.metodo_pago}</span>
                       )}
                     </td>
-                    <td className={`p-4 text-right font-black text-lg ${mov.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>{mov.tipo === 'ingreso' ? '+' : '-'} {formatMoney(mov.monto)}</td>
+                    <td className={`p-4 text-right font-black whitespace-nowrap min-w-[150px] ${mov.tipo === 'ingreso' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-sm opacity-70">{mov.tipo === 'ingreso' ? '+' : '-'}</span>
+                        <span className="text-base tracking-tighter">{formatMoney(mov.monto)}</span>
+                      </div>
+                    </td>
                   </tr>
                 ))
               )}

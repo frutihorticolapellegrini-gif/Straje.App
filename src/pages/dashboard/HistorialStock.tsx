@@ -10,8 +10,12 @@ export const HistorialStock = () => {
   const [searchTerm, setSearchTerm] = useState('')
 
   useEffect(() => {
-    fetchHistorial()
-  }, [])
+    if (profile?.empresa_id) {
+      fetchHistorial()
+    } else if (profile) {
+      setLoading(false)
+    }
+  }, [profile?.empresa_id])
 
   const fetchHistorial = async () => {
     setLoading(true)
@@ -19,9 +23,15 @@ export const HistorialStock = () => {
       const { data, error } = await supabase
         .from('historial_stock')
         .select(`
-          *,
-          prenda:prenda_id(codigo, tipo),
-          usuario:usuario_id(nombre)
+          id,
+          tipo_movimiento,
+          cantidad,
+          motivo,
+          creado_en,
+          prenda_id,
+          usuario_id,
+          prenda:stock!prenda_id(codigo, tipo),
+          usuario:usuarios!usuario_id(nombre)
         `)
         .eq('empresa_id', profile?.empresa_id)
         .order('creado_en', { ascending: false })

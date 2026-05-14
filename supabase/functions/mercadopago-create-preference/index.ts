@@ -19,6 +19,10 @@ serve(async (req) => {
 
     if (!MP_ACCESS_TOKEN) throw new Error("Falta MP_ACCESS_TOKEN en los Secrets de Supabase");
 
+    // Lógica de Precios según el Cliente (Normalizar email para evitar errores de espacios o mayúsculas)
+    const email_limpio = email_empresa?.toLowerCase().trim();
+    const unit_price = email_limpio === 'cache_tienda2026@hotmail.com' ? 80000 : 40000;
+
     const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
       headers: {
@@ -27,9 +31,9 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         items: [{
-          title: "Suscripción Mensual - Straje.App",
+          title: email_empresa === 'cache_tienda2026@hotmail.com' ? "Suscripción Premium - Straje.App" : "Suscripción Mensual - Straje.App",
           quantity: 1,
-          unit_price: 40000,
+          unit_price: unit_price,
           currency_id: "ARS"
         }],
         external_reference: empresa_id,

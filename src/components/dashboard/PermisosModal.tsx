@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
-import { X, Save, AlertCircle, Shield, Info } from 'lucide-react'
+import { X, Save, AlertCircle, Shield, Info, LayoutDashboard, LayoutGrid, Calendar, ShoppingCart, DollarSign, MessageCircle, Scissors, Package, Waves, History, BarChart2, Settings, Users } from 'lucide-react'
 
 interface PermisosModalProps {
   empleado: { id: string; nombre: string; permisos?: any }
@@ -12,22 +12,49 @@ export const PermisosModal: React.FC<PermisosModalProps> = ({ empleado, onClose,
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  // Estado de permisos individuales ampliado (Punto 5)
+  // Estado de todos los módulos del sidebar
   const [permisos, setPermisos] = useState({
-    puede_ver_historial: false,
+    ver_inicio: true,
+    ver_disponibilidad: true,
+    ver_alquileres: true,
+    ver_ventas: true,
+    ver_caja: true,
+    ver_cuentacorriente: true,
+    ver_troqueles: true,
+    ver_preparar: true,
+    ver_lavanderia: true,
+    ver_inventario: true,
+    ver_historial_stock: true,
+    ver_rentabilidad: false,
+    ver_historial_caja: false,
+    ver_empleados: false,
+    ver_configuracion: false,
+    // Permisos de acciones (mantener los anteriores)
     puede_cargar_stock: false,
     puede_cancelar_ventas: false,
-    puede_ver_inventario: true,
     puede_ver_totales_caja: false
   })
 
   useEffect(() => {
     if (empleado.permisos) {
       setPermisos({
-        puede_ver_historial: !!empleado.permisos.puede_ver_historial,
+        ver_inicio: empleado.permisos.ver_inicio !== false,
+        ver_disponibilidad: empleado.permisos.ver_disponibilidad !== false,
+        ver_alquileres: empleado.permisos.ver_alquileres !== false,
+        ver_ventas: empleado.permisos.ver_ventas !== false,
+        ver_caja: empleado.permisos.ver_caja !== false,
+        ver_cuentacorriente: empleado.permisos.ver_cuentacorriente !== false,
+        ver_troqueles: empleado.permisos.ver_troqueles !== false,
+        ver_preparar: empleado.permisos.ver_preparar !== false,
+        ver_lavanderia: empleado.permisos.ver_lavanderia !== false,
+        ver_inventario: empleado.permisos.ver_inventario !== false,
+        ver_historial_stock: empleado.permisos.ver_historial_stock !== false,
+        ver_rentabilidad: !!empleado.permisos.ver_rentabilidad,
+        ver_historial_caja: !!empleado.permisos.ver_historial_caja,
+        ver_empleados: !!empleado.permisos.ver_empleados,
+        ver_configuracion: !!empleado.permisos.ver_configuracion,
         puede_cargar_stock: !!empleado.permisos.puede_cargar_stock,
         puede_cancelar_ventas: !!empleado.permisos.puede_cancelar_ventas,
-        puede_ver_inventario: empleado.permisos.puede_ver_inventario !== false,
         puede_ver_totales_caja: !!empleado.permisos.puede_ver_totales_caja
       })
     }
@@ -58,94 +85,79 @@ export const PermisosModal: React.FC<PermisosModalProps> = ({ empleado, onClose,
     }
   }
 
+  const PermissionItem = ({ label, icon: Icon, value, onChange, description }: any) => (
+    <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
+      <input 
+        type="checkbox" 
+        checked={value}
+        onChange={onChange}
+        className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
+      />
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          {Icon && <Icon size={14} className="text-brand-blue" />}
+          <p className="text-sm font-bold text-brand-dark">{label}</p>
+        </div>
+        {description && <p className="text-[9px] text-brand-gray mt-0.5 uppercase font-bold">{description}</p>}
+      </div>
+    </label>
+  )
+
   return (
-    <div className="fixed inset-0 bg-brand-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-brand-white rounded-semi shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-brand-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-[120]">
+      <div className="bg-brand-white rounded-semi shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[90vh]">
         
         <div className="bg-brand-black px-6 py-4 flex justify-between items-center shrink-0">
-          <h3 className="text-xl font-bold text-white flex items-center gap-2">
-            <Shield size={20} /> Gestión de Permisos
+          <h3 className="text-xl font-bold text-white flex items-center gap-2 italic uppercase tracking-tighter">
+            <Shield size={20} className="text-brand-blue" /> Gestión de Accesos: {empleado.nombre}
           </h3>
           <button onClick={onClose} className="p-2 text-brand-gray hover:text-white rounded-full transition-colors">
             <X size={20} />
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
           <div className="bg-blue-50 border border-blue-100 p-4 rounded-semi mb-6 flex gap-3">
             <Info className="text-brand-blue shrink-0" size={20} />
-            <p className="text-xs text-brand-blue leading-relaxed">
-              <strong>Nota:</strong> Los permisos marcados permiten al empleado acceder a funciones específicas. Si una opción está desmarcada, el empleado no podrá ver esa sección o dato en su panel.
+            <p className="text-xs text-brand-blue leading-relaxed font-bold uppercase">
+              Selecciona qué módulos de la barra lateral podrá ver y utilizar este empleado.
             </p>
           </div>
 
-          <div className="space-y-3">
-            
-            <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
-              <input 
-                type="checkbox" 
-                checked={permisos.puede_ver_inventario}
-                onChange={() => handleToggle('puede_ver_inventario')}
-                className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
-              />
-              <div>
-                <p className="text-sm font-bold text-brand-dark">Ver Inventario / Stock</p>
-                <p className="text-[10px] text-brand-gray mt-0.5">Si se desmarca, el empleado no verá la lista de prendas ni stock.</p>
-              </div>
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-brand-gray uppercase tracking-[0.2em] mb-2">Módulos de Operación</h4>
+              <PermissionItem label="Inicio / Dashboard" icon={LayoutDashboard} value={permisos.ver_inicio} onChange={() => handleToggle('ver_inicio')} />
+              <PermissionItem label="Disponibilidad" icon={LayoutGrid} value={permisos.ver_disponibilidad} onChange={() => handleToggle('ver_disponibilidad')} />
+              <PermissionItem label="Alquileres" icon={Calendar} value={permisos.ver_alquileres} onChange={() => handleToggle('ver_alquileres')} />
+              <PermissionItem label="Ventas" icon={ShoppingCart} value={permisos.ver_ventas} onChange={() => handleToggle('ver_ventas')} />
+              <PermissionItem label="Caja Diaria" icon={DollarSign} value={permisos.ver_caja} onChange={() => handleToggle('ver_caja')} />
+              <PermissionItem label="Cuenta Corriente" icon={MessageCircle} value={permisos.ver_cuentacorriente} onChange={() => handleToggle('ver_cuentacorriente')} />
+              <PermissionItem label="Troqueles" icon={Scissors} value={permisos.ver_troqueles} onChange={() => handleToggle('ver_troqueles')} />
+            </div>
 
-            <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
-              <input 
-                type="checkbox" 
-                checked={permisos.puede_cargar_stock}
-                onChange={() => handleToggle('puede_cargar_stock')}
-                className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
-              />
-              <div>
-                <p className="text-sm font-bold text-brand-dark">Modificar Stock / Cargar Nuevos</p>
-                <p className="text-[10px] text-brand-gray mt-0.5">Permite añadir nuevas prendas, editar cantidades y dar de baja artículos.</p>
-              </div>
-            </label>
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-brand-gray uppercase tracking-[0.2em] mb-2">Taller e Inventario</h4>
+              <PermissionItem label="Pedidos a Preparar" icon={Package} value={permisos.ver_preparar} onChange={() => handleToggle('ver_preparar')} />
+              <PermissionItem label="Lavandería" icon={Waves} value={permisos.ver_lavanderia} onChange={() => handleToggle('ver_lavanderia')} />
+              <PermissionItem label="Inventario / Stock" icon={Package} value={permisos.ver_inventario} onChange={() => handleToggle('ver_inventario')} />
+              <PermissionItem label="Historial de Stock" icon={History} value={permisos.ver_historial_stock} onChange={() => handleToggle('ver_historial_stock')} />
+              
+              <h4 className="text-[10px] font-black text-brand-gray uppercase tracking-[0.2em] mt-6 mb-2">Módulos de Dueño</h4>
+              <PermissionItem label="Rentabilidad" icon={BarChart2} value={permisos.ver_rentabilidad} onChange={() => handleToggle('ver_rentabilidad')} />
+              <PermissionItem label="Historial de Caja" icon={BarChart2} value={permisos.ver_historial_caja} onChange={() => handleToggle('ver_historial_caja')} />
+              <PermissionItem label="Empleados" icon={Users} value={permisos.ver_empleados} onChange={() => handleToggle('ver_empleados')} />
+              <PermissionItem label="Configuración" icon={Settings} value={permisos.ver_configuracion} onChange={() => handleToggle('ver_configuracion')} />
+            </div>
+          </div>
 
-            <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
-              <input 
-                type="checkbox" 
-                checked={permisos.puede_ver_historial}
-                onChange={() => handleToggle('puede_ver_historial')}
-                className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
-              />
-              <div>
-                <p className="text-sm font-bold text-brand-dark">Ver Historial de Movimientos</p>
-                <p className="text-[10px] text-brand-gray mt-0.5">Permite ver el registro de ventas, alquileres y movimientos de caja.</p>
-              </div>
-            </label>
-
-            <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
-              <input 
-                type="checkbox" 
-                checked={permisos.puede_ver_totales_caja}
-                onChange={() => handleToggle('puede_ver_totales_caja')}
-                className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
-              />
-              <div>
-                <p className="text-sm font-bold text-brand-dark">Ver Totales de Dinero en Caja</p>
-                <p className="text-[10px] text-brand-gray mt-0.5">Si se desmarca, el empleado verá los movimientos pero NO los totales sumados.</p>
-              </div>
-            </label>
-
-            <label className="flex items-start gap-3 p-3 bg-brand-lightGray/50 border border-brand-gray/20 rounded-semi cursor-pointer hover:bg-brand-lightGray transition-colors">
-              <input 
-                type="checkbox" 
-                checked={permisos.puede_cancelar_ventas}
-                onChange={() => handleToggle('puede_cancelar_ventas')}
-                className="mt-1 h-4 w-4 text-brand-blue border-gray-300 rounded focus:ring-brand-blue"
-              />
-              <div>
-                <p className="text-sm font-bold text-brand-dark">Cancelar Ventas / Alquileres</p>
-                <p className="text-[10px] text-brand-gray mt-0.5">Permite anular operaciones y realizar devoluciones de dinero.</p>
-              </div>
-            </label>
-
+          <div className="mt-8 pt-6 border-t border-brand-gray/10">
+            <h4 className="text-[10px] font-black text-brand-gray uppercase tracking-[0.2em] mb-4">Permisos Especiales de Acción</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <PermissionItem label="Cargar / Modificar Stock" description="Añadir nuevas prendas y editar" value={permisos.puede_cargar_stock} onChange={() => handleToggle('puede_cargar_stock')} />
+               <PermissionItem label="Cancelar Operaciones" description="Anular ventas y alquileres" value={permisos.puede_cancelar_ventas} onChange={() => handleToggle('puede_cancelar_ventas')} />
+               <PermissionItem label="Ver Totales de Dinero" description="Ver sumas totales en caja" value={permisos.puede_ver_totales_caja} onChange={() => handleToggle('puede_ver_totales_caja')} />
+            </div>
           </div>
 
           {error && (
@@ -158,9 +170,9 @@ export const PermisosModal: React.FC<PermisosModalProps> = ({ empleado, onClose,
           <button 
             onClick={handleSave} 
             disabled={loading} 
-            className="w-full py-3 bg-brand-blue hover:bg-blue-600 text-white font-bold rounded-semi flex items-center justify-center gap-2 transition-colors mt-6"
+            className="w-full py-4 bg-brand-black hover:bg-brand-gray text-white font-black rounded-semi flex items-center justify-center gap-2 transition-all mt-8 uppercase tracking-widest shadow-xl"
           >
-            {loading ? 'Guardando...' : <><Save size={18} /> Guardar Permisos</>}
+            {loading ? 'Sincronizando...' : <><Save size={18} /> Guardar Configuración de Accesos</>}
           </button>
         </div>
 

@@ -4,7 +4,30 @@ import { AlertTriangle, CreditCard, CheckCircle2, LogOut } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 
 export const SubscriptionGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { empresa, profile, signOut } = useAuth()
+  const { empresa, profile, signOut, loading } = useAuth()
+
+  // Si está cargando O si aún no tenemos los datos básicos, mantenemos la pantalla negra profesional
+  if (loading || !profile || !empresa) {
+    return (
+      <div className="fixed inset-0 bg-brand-black flex flex-col items-center justify-center z-[9999] animate-in fade-in duration-500">
+        <div className="relative">
+          {/* Spinner Industrial */}
+          <div className="w-24 h-24 border-4 border-brand-blue/20 border-t-brand-blue rounded-full animate-spin"></div>
+          <div className="absolute inset-0 flex items-center justify-center">
+             <div className="w-12 h-12 border-4 border-white/10 border-b-white rounded-full animate-spin-reverse"></div>
+          </div>
+        </div>
+        <div className="mt-8 text-center">
+          <h2 className="text-white font-black text-2xl tracking-[0.3em] uppercase italic animate-pulse">Straje.App</h2>
+          <div className="flex items-center gap-2 justify-center mt-2">
+            <div className="w-2 h-2 bg-brand-blue rounded-full animate-bounce"></div>
+            <div className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:0.2s]"></div>
+            <div className="w-2 h-2 bg-brand-blue rounded-full animate-bounce [animation-delay:0.4s]"></div>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   // EXCEPCIÓN PARA EL PROGRAMADOR Y USUARIOS PREMIUM EXISTENTES (Excepto cache_tienda para forzar suscripción en 30 días)
   if (

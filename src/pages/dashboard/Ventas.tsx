@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { ShoppingBag, Plus, Search, XCircle, MessageSquare } from 'lucide-react'
+import { ShoppingBag, Plus, Search, XCircle, MessageSquare, X } from 'lucide-react'
 import { VentaForm } from '../../components/ventas/VentaForm'
 import { formatMoney } from '../../utils/formatters'
 
@@ -30,6 +30,10 @@ export const Ventas = () => {
   const [searchTerm, setSearchTerm] = useState('')
   const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showConfirmCancel, setShowConfirmCancel] = useState(false)
+  const [motivoCancel, setMotivoCancel] = useState('')
 
   useEffect(() => {
     fetchVentas()
@@ -43,7 +47,7 @@ export const Ventas = () => {
         .select(`
           *,
           detalles:venta_detalles(
-            prenda:prenda_id(codigo, tipo)
+            prenda:prenda_id(id, codigo, tipo)
           )
         `)
         .eq('empresa_id', profile?.empresa_id)
@@ -59,42 +63,79 @@ export const Ventas = () => {
   }
 
   const handleCancelarVenta = async (venta: Venta) => {
-    const motivo = window.prompt("MOTIVO DE CANCELACIÓN (OBLIGATORIO):");
-    if (!motivo || motivo.trim().length < 5) {
-      alert("Debes ingresar un motivo válido (mínimo 5 letras).");
-      return;
-    }
+    setSelectedVenta(venta);
+    setShowConfirmCancel(true);
+    setMotivoCancel('');
+  }
 
-    if (!window.confirm("¿Estás seguro de cancelar esta venta? El dinero se restará de la caja.")) return;
+  const confirmAnular = async () => {
+    if (!selectedVenta) return;
+    const venta = selectedVenta;
+    const motivo = motivoCancel || "ANULACIÓN MANUAL";
+    
+    setShowConfirmCancel(false);
+    console.log("PROCEDIENDO A ANULAR VENTA:", venta.id);
 
     try {
+      console.log("1. ENVIANDO UPDATE A VENTAS...");
       const { error: vError } = await supabase.from('ventas').update({ 
         estado: 'cancelada', 
         motivo_cancelacion: motivo 
       }).eq('id', venta.id)
       
-      if (vError) throw vError
+      if (vError) {
+        console.error("ERROR EN UPDATE VENTAS:", vError);
+        throw vError;
+      }
+      console.log("2. UPDATE VENTAS OK. RESTAURANDO STOCK...");
 
-      for (const det of (venta.detalles || [])) {
-        const prendaId = (det as any).prenda?.id || (det as any).prenda_id;
-        if (prendaId) {
-          await supabase.rpc('increment_disponibles', { prenda_id: prendaId });
+      // Restaurar Stock
+      if (venta.detalles) {
+        for (const det of venta.detalles) {
+          const pId = (det as any).prenda?.id || (det as any).prenda_id;
+          if (pId) {
+             const { data: s } = await supabase.from('stock').select('disponibles').eq('id', pId).single();
+             if (s) await supabase.from('stock').update({ disponibles: s.disponibles + 1 }).eq('id', pId);
+          }
         }
       }
 
-      await supabase.from('caja').insert({
-        empresa_id: profile?.empresa_id,
-        usuario_id: profile?.id,
-        tipo: 'egreso',
-        monto: venta.precio_total,
-        concepto: `DEVOLUCIÓN/CANCELACIÓN VENTA: ${motivo.toUpperCase()}`,
-        metodo_pago: venta.metodo_pago
-      })
+      // 3. Revertir Caja y Cta Cte
+      try {
+        const montoRevertir = Number(venta.precio_total) || 0;
+        console.log("3. REGISTRANDO EGRESO EN CAJA DE:", montoRevertir);
+        
+        // Registrar Egreso
+        const { error: cError } = await supabase.from('caja').insert({
+          empresa_id: profile?.empresa_id,
+          usuario_id: profile?.id,
+          tipo: 'egreso',
+          monto: montoRevertir,
+          concepto: `ANULACIÓN VENTA: ${venta.cliente_nombre || 'S/N'} - MOTIVO: ${motivo.toUpperCase()}`,
+          metodo_pago: venta.metodo_pago
+        });
 
-      fetchVentas()
-      alert("Venta cancelada y stock restaurado.");
+        if (cError) console.error("ERROR EN CAJA:", cError);
+        else console.log("4. CAJA OK. ACTUALIZANDO CTA CTE...");
+
+        // Saldar Cta Cte si existe
+        const { error: ccError } = await supabase.from('cuentas_corrientes')
+          .update({ estado: 'saldado', monto_pendiente: 0 })
+          .eq('venta_id', venta.id);
+          
+        if (ccError) console.error("ERROR EN CTA CTE:", ccError);
+        else console.log("5. CTA CTE OK.");
+          
+      } catch (contableErr) {
+        console.error("Error contable al anular:", contableErr);
+      }
+
+      console.log("6. FINALIZANDO Y REFRESCANDO...");
+      await fetchVentas();
+      alert("VENTA ANULADA CON ÉXITO.");
     } catch (e: any) {
-      alert("Error: " + e.message)
+      console.error("Error al anular venta:", e);
+      alert("ERROR AL ANULAR: " + (e.message || "Error desconocido"));
     }
   }
 
@@ -192,11 +233,18 @@ export const Ventas = () => {
                       <p className="text-[10px] text-brand-gray font-bold">{venta.metodo_pago.toUpperCase()}</p>
                     </td>
                     <td className="p-4 text-center">
-                      <span className={`px-2 py-1 rounded-semi text-[9px] font-black uppercase tracking-widest border ${
-                        venta.estado === 'cancelada' ? 'bg-red-50 text-red-600 border-red-200' : 'bg-green-50 text-green-600 border-green-200'
+                      <button 
+                        onClick={() => {
+                          setSelectedVenta(venta)
+                          setShowDetails(true)
+                        }}
+                        className={`px-2 py-1 rounded-semi text-[9px] font-black uppercase tracking-widest border transition-all hover:scale-110 ${
+                        venta.estado === 'cancelada' ? 'bg-red-50 text-red-600 border-red-200' : 
+                        venta.estado === 'pendiente_pago' ? 'bg-orange-50 text-orange-600 border-orange-200 shadow-md cursor-pointer' :
+                        'bg-green-50 text-green-600 border-green-200'
                       }`}>
-                        {venta.estado}
-                      </span>
+                        {venta.estado === 'pendiente_pago' ? 'FALTA PAGAR' : venta.estado === 'cancelada' ? 'ANULADA' : 'PAGADO'}
+                      </button>
                       {venta.motivo_cancelacion && (
                         <div className="flex items-center justify-center gap-1 mt-1 text-red-400 group-hover:text-red-600">
                           <MessageSquare size={10} />
@@ -231,6 +279,102 @@ export const Ventas = () => {
 
       {isFormOpen && (
         <VentaForm onClose={() => setIsFormOpen(false)} onSave={fetchVentas} />
+      )}
+
+      {showDetails && selectedVenta && (
+        <div className="fixed inset-0 bg-brand-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-semi shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95">
+             <div className="p-6 bg-brand-black text-white flex justify-between items-center">
+                <h3 className="text-xl font-black italic uppercase tracking-tighter flex items-center gap-2">Detalle de Venta</h3>
+                <button onClick={() => setShowDetails(false)} className="text-white/50 hover:text-white uppercase font-black text-xs">Cerrar</button>
+             </div>
+             <div className="p-8 space-y-6">
+                <div className="flex justify-between items-center border-b pb-4">
+                  <div>
+                    <p className="text-[10px] font-black text-brand-gray uppercase tracking-widest">Cliente</p>
+                    <p className="text-lg font-black uppercase text-brand-black tracking-tighter">{selectedVenta.cliente_nombre || 'Consumidor Final'}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-brand-gray uppercase tracking-widest">Fecha</p>
+                    <p className="font-bold text-xs">{new Date(selectedVenta.creado_en).toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                   <p className="text-[10px] font-black text-brand-gray uppercase tracking-widest">Artículos</p>
+                   <div className="space-y-2">
+                      {selectedVenta.detalles?.map((d, i) => (
+                        <div key={i} className="flex justify-between items-center p-3 bg-brand-lightGray rounded-semi border border-brand-gray/5">
+                           <span className="font-black text-xs text-brand-black uppercase italic tracking-tighter">{d.prenda?.tipo}</span>
+                           <span className="px-2 py-0.5 bg-brand-black text-white font-mono text-[9px] font-black rounded uppercase">{d.prenda?.codigo}</span>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+
+                <div className="bg-brand-blue/5 p-4 rounded-semi border border-brand-blue/20">
+                   <div className="flex justify-between items-center">
+                      <p className="text-[10px] font-black text-brand-blue uppercase tracking-widest">Total de la Operación</p>
+                      <p className="text-2xl font-black text-brand-blue italic tracking-tighter">{formatMoney(selectedVenta.precio_total)}</p>
+                   </div>
+                   <div className="flex justify-between items-center mt-2 opacity-70">
+                      <p className="text-[9px] font-bold text-brand-gray uppercase tracking-widest">Método de Pago</p>
+                      <p className="text-xs font-black text-brand-black uppercase italic tracking-tighter">{selectedVenta.metodo_pago}</p>
+                   </div>
+                   {selectedVenta.estado === 'pendiente_pago' && (
+                     <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded-semi flex items-center gap-2">
+                        <MessageSquare size={16} className="text-orange-600" />
+                        <p className="text-[10px] font-black text-orange-700 uppercase leading-tight italic">ESTA VENTA TIENE UN SALDO PENDIENTE EN CUENTA CORRIENTE</p>
+                     </div>
+                   )}
+                </div>
+
+                <button onClick={() => setShowDetails(false)} className="w-full py-4 bg-brand-black text-white font-black rounded-semi uppercase text-xs tracking-widest hover:bg-brand-gray transition-all shadow-xl">Entendido</button>
+             </div>
+          </div>
+        </div>
+      )}
+      {showConfirmCancel && (
+        <div className="fixed inset-0 bg-brand-black/90 backdrop-blur-sm flex items-center justify-center p-4 z-[100]">
+          <div className="bg-white rounded-semi shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300">
+            <div className="p-6 bg-red-600 text-white flex justify-between items-center">
+              <h4 className="font-black uppercase italic flex items-center gap-2 tracking-tighter">
+                <XCircle size={20} /> Confirmar Anulación
+              </h4>
+              <button onClick={() => setShowConfirmCancel(false)}><X size={20} /></button>
+            </div>
+            <div className="p-8 space-y-6">
+              <p className="text-sm font-bold text-brand-gray uppercase text-center tracking-tight">
+                ¿Estás seguro de anular esta venta? <br/> El stock será restaurado y se generará un egreso en caja.
+              </p>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-brand-gray uppercase tracking-widest block">Motivo de Cancelación (Opcional)</label>
+                <textarea 
+                  value={motivoCancel}
+                  onChange={(e) => setMotivoCancel(e.target.value)}
+                  className="w-full px-4 py-3 bg-brand-lightGray rounded-semi font-bold text-xs outline-none focus:ring-2 focus:ring-red-500 h-24 resize-none uppercase"
+                  placeholder="EJ: ERROR EN PRECIO, CAMBIO DE PRODUCTO..."
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setShowConfirmCancel(false)}
+                  className="flex-1 py-4 bg-brand-lightGray text-brand-gray font-black rounded-semi uppercase text-xs tracking-widest hover:bg-brand-gray/10 transition-all"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmAnular}
+                  className="flex-1 py-4 bg-red-600 text-white font-black rounded-semi uppercase text-xs tracking-widest shadow-xl hover:bg-red-700 transition-all"
+                >
+                  Anular Venta
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

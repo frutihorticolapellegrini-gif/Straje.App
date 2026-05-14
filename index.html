@@ -18,10 +18,17 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // LIMPIEZA AGRESIVA DE SERVICE WORKERS Y CACHÉ
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js');
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
         });
+        caches.keys().then(function(names) {
+          for (let name of names) caches.delete(name);
+        });
+        console.log('Service Workers y Caché eliminados.');
       }
     </script>
   </body>

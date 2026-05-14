@@ -15,6 +15,12 @@ import { Caja } from './pages/dashboard/Caja'
 import { Historial } from './pages/dashboard/Historial'
 import { Config } from './pages/dashboard/Config'
 import { HistorialStock } from './pages/dashboard/HistorialStock'
+import { CuentaCorriente } from './pages/dashboard/CuentaCorriente'
+import { Troqueles } from './pages/dashboard/Troqueles'
+import { Lavanderia } from './pages/dashboard/Lavanderia'
+import { PedidosPreparar } from './pages/dashboard/PedidosPreparar'
+import { Disponibilidad } from './pages/dashboard/Disponibilidad'
+import { Rentabilidad } from './pages/dashboard/Rentabilidad'
 
 // Componente para proteger las rutas (solo usuarios logueados)
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -58,6 +64,12 @@ function AppRoutes() {
         <Route path="ventas" element={<Ventas />} />
         <Route path="empleados" element={<Employees />} />
         <Route path="caja" element={<Caja />} />
+        <Route path="cuenta-corriente" element={<CuentaCorriente />} />
+        <Route path="troqueles" element={<Troqueles />} />
+        <Route path="lavanderia" element={<Lavanderia />} />
+        <Route path="pedidos-preparar" element={<PedidosPreparar />} />
+        <Route path="disponibilidad" element={<Disponibilidad />} />
+        <Route path="rentabilidad" element={<Rentabilidad />} />
         <Route path="historial" element={<Historial />} />
         <Route path="historial-stock" element={<HistorialStock />} />
         <Route path="configuracion" element={<Config />} />

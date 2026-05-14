@@ -17,7 +17,8 @@ export const Config = () => {
     telefono: '',
     direccion: '',
     localidad: '',
-    logo_url: ''
+    logo_url: '',
+    aviso_legal: ''
   })
 
   const [passwords, setPasswords] = useState({ new_password: '', confirm_password: '' })
@@ -32,7 +33,8 @@ export const Config = () => {
         telefono: empresa.telefono || '',
         direccion: empresa.direccion || '',
         localidad: empresa.localidad || '',
-        logo_url: empresa.logo_url || ''
+        logo_url: empresa.logo_url || '',
+        aviso_legal: (empresa as any).aviso_legal || ''
       })
     }
   }, [profile, empresa])
@@ -89,7 +91,8 @@ export const Config = () => {
         nombre: userData.empresa_nombre,
         telefono: userData.telefono,
         direccion: userData.direccion,
-        localidad: userData.localidad
+        localidad: userData.localidad,
+        aviso_legal: userData.aviso_legal
       }).eq('id', empresa.id)
       
       if (eErr) {
@@ -173,6 +176,7 @@ export const Config = () => {
               <div className="md:col-span-2"><label className="text-xs font-black text-brand-gray uppercase mb-1 block tracking-widest">Nombre del Negocio</label><input type="text" value={userData.empresa_nombre} onChange={e => setUserData({...userData, empresa_nombre: e.target.value})} className="w-full px-4 py-4 bg-brand-lightGray border-none rounded-semi font-black uppercase outline-none focus:ring-2 focus:ring-brand-blue text-lg" /></div>
               <div><label className="text-xs font-black text-brand-gray uppercase mb-1 block">Dueño</label><input type="text" value={userData.nombre} onChange={e => setUserData({...userData, nombre: e.target.value})} className="w-full px-4 py-3 bg-brand-lightGray border-none rounded-semi font-black uppercase outline-none" /></div>
               <div><label className="text-xs font-black text-brand-gray uppercase mb-1 block">WhatsApp</label><input type="text" value={userData.telefono} onChange={e => setUserData({...userData, telefono: e.target.value})} className="w-full px-4 py-3 bg-brand-lightGray border-none rounded-semi font-bold outline-none" /></div>
+              <div className="md:col-span-2"><label className="text-xs font-black text-brand-gray uppercase mb-1 block tracking-widest">Leyenda Legal / Pie de Remito</label><textarea value={userData.aviso_legal} onChange={e => setUserData({...userData, aviso_legal: e.target.value})} className="w-full px-4 py-3 bg-brand-lightGray border-none rounded-semi font-bold outline-none h-20" placeholder="Ej: No se aceptan devoluciones pasados los 30 días..." /></div>
             </div>
             <button type="submit" disabled={loading} className="w-full py-5 bg-brand-blue text-white font-black rounded-semi shadow-xl hover:bg-blue-600 transition-all uppercase tracking-widest text-sm flex items-center justify-center gap-3"><Save size={24} /> Confirmar y Guardar Cambios</button>
           </form>
