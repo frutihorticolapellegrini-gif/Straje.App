@@ -69,12 +69,12 @@ export const CuentaCorriente = () => {
       
       if (error) throw error
       
-      // Filtrar clientes que tengan al menos una cuenta pendiente o parcial en JS para evitar Error 400
-      const clientesConDeuda = (data || []).filter(cliente => 
-        cliente.cuentas_corrientes.some((cc: any) => cc.estado === 'pendiente' || cc.estado === 'parcial')
+      // Filtrar clientes que tengan al menos una cuenta (sin importar si está pendiente o saldada)
+      const clientesConHistorial = (data || []).filter(cliente => 
+        cliente.cuentas_corrientes && cliente.cuentas_corrientes.length > 0
       )
 
-      setClientes(clientesConDeuda)
+      setClientes(clientesConHistorial)
     } catch (err) {
       console.error(err)
     } finally {
@@ -146,6 +146,42 @@ export const CuentaCorriente = () => {
         metodo_pago: metodoPago,
         usuario_id: profile?.id
       })
+
+      // NOVEDAD PUNTO 3: Sincronizar con Alquileres (Si es un condicional/alquiler)
+      // "Si confirmo ahí que entregó y pagó una deuda... automáticamente en alquileres el botón de devolver se tendría que ir"
+      if (cuentaSeleccionada.alquiler_id) {
+        const { data: alq } = await supabase.from('alquileres')
+          .select('id, sena_pagada')
+          .eq('id', cuentaSeleccionada.alquiler_id)
+          .single()
+          
+        if (alq) {
+          const nuevaSena = (alq.sena_pagada || 0) + monto
+          const updateAlq: any = { sena_pagada: nuevaSena }
+          
+          if (nuevoEstado === 'saldado') {
+             updateAlq.estado = 'devuelto'
+             
+             // Actualizar stock de las prendas a lavandería (ya que se devolvieron)
+             const { data: alqDet } = await supabase.from('alquiler_detalles').select('prenda_id').eq('alquiler_id', alq.id)
+             if (alqDet && alqDet.length > 0) {
+               for (const det of alqDet) {
+                 await supabase.from('stock').update({ estado: 'lavanderia' }).eq('id', det.prenda_id)
+                 await supabase.from('historial_stock').insert({
+                   empresa_id: profile?.empresa_id,
+                   prenda_id: det.prenda_id,
+                   tipo_movimiento: 'entrada',
+                   cantidad: 0,
+                   motivo: `Devolución Condicional desde Cta. Corriente`,
+                   usuario_id: profile?.id
+                 })
+               }
+             }
+          }
+
+          await supabase.from('alquileres').update(updateAlq).eq('id', alq.id)
+        }
+      }
 
       setShowPagoModal(false)
       setMontoPago('')
@@ -304,8 +340,7 @@ export const CuentaCorriente = () => {
                 .filter(c => {
                   if (activeTab === 'condicional') {
                     const hasCondicional = (c.cuentas_corrientes || []).some((cc: any) => 
-                      (cc.es_condicional === true || cc.es_condicional === 'true') && 
-                      cc.estado !== 'saldado'
+                      (cc.es_condicional === true || cc.es_condicional === 'true')
                     )
                     return hasCondicional
                   }
@@ -334,12 +369,15 @@ export const CuentaCorriente = () => {
                     
                     <div className="flex justify-between items-end">
                       <div>
-                        <p className="text-[10px] font-black text-brand-gray uppercase opacity-50">Deuda Total</p>
-                        <p className={`text-2xl font-black italic tracking-tighter ${tieneVencidos ? 'text-red-600' : 'text-brand-orange'}`}>
+                        <p className="text-[10px] font-black text-brand-gray uppercase opacity-50">Deuda Pendiente</p>
+                        <p className={`text-2xl font-black italic tracking-tighter ${totalDeuda === 0 ? 'text-green-600' : tieneVencidos ? 'text-red-600' : 'text-brand-orange'}`}>
                           {formatMoney(totalDeuda)}
                         </p>
                       </div>
-                      {tieneVencidos && (
+                      {totalDeuda === 0 && (
+                        <div className="bg-green-100 text-green-700 px-2 py-1 rounded text-[8px] font-black uppercase">Saldado</div>
+                      )}
+                      {tieneVencidos && totalDeuda > 0 && (
                         <div className="bg-red-100 text-red-600 px-2 py-1 rounded text-[8px] font-black uppercase animate-bounce">Vencido</div>
                       )}
                     </div>
@@ -531,12 +569,17 @@ export const CuentaCorriente = () => {
                 )}
 
                 {cuentas.some(c => c.estado === 'saldado') && (
-                  <div className="mt-12 space-y-4 opacity-50">
-                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gray">Saldados Recientemente</h4>
-                    {cuentas.filter(c => c.estado === 'saldado').slice(0, 3).map(cuenta => (
-                      <div key={cuenta.id} className="bg-brand-lightGray/50 p-4 rounded-semi flex justify-between items-center grayscale">
-                         <p className="font-bold text-xs uppercase truncate">{cuenta.alquiler_id ? 'Alquiler' : 'Venta'} - {new Date(cuenta.creado_en).toLocaleDateString()}</p>
-                         <p className="font-black text-xs">{formatMoney(cuenta.monto_original)} - SALDADO</p>
+                  <div className="mt-12 space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gray">Historial Saldado</h4>
+                    {cuentas.filter(c => c.estado === 'saldado').map(cuenta => (
+                      <div key={cuenta.id} className="bg-brand-lightGray/50 p-4 rounded-semi flex justify-between items-center grayscale hover:grayscale-0 transition-all cursor-pointer" onClick={() => { setSelectedMovementDetails(cuenta); setShowViewDetailsModal(true); }}>
+                         <div className="flex items-center gap-3">
+                           <span className={`px-2 py-1 rounded text-[8px] font-black uppercase ${cuenta.es_condicional ? 'bg-violet-600 text-white' : cuenta.alquiler_id ? 'bg-brand-blue/10 text-brand-blue' : 'bg-purple-100 text-purple-700'}`}>
+                             {cuenta.es_condicional ? 'CONDICIONAL' : cuenta.alquiler_id ? 'Alquiler' : 'Venta'}
+                           </span>
+                           <p className="font-bold text-xs uppercase truncate">{new Date(cuenta.creado_en).toLocaleDateString()}</p>
+                         </div>
+                         <p className="font-black text-xs text-green-700">{formatMoney(cuenta.monto_original)} - SALDADO</p>
                       </div>
                     ))}
                   </div>

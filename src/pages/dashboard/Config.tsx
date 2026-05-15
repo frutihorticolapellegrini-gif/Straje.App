@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Settings, Save, Building2, Image as ImageIcon, CheckCircle2, AlertCircle, Key, RefreshCw, Zap, CreditCard } from 'lucide-react'
+import { Settings, Save, Building2, Image as ImageIcon, CheckCircle2, AlertCircle, Key, RefreshCw, Zap, CreditCard, MessageCircle } from 'lucide-react'
 
 export const Config = () => {
   const { profile, empresa, refreshProfile } = useAuth()
@@ -258,6 +258,20 @@ export const Config = () => {
                 )}
               </div>
             </div>
+          </div>
+          
+          {/* BOTÓN SOPORTE TÉCNICO */}
+          <div className="bg-white p-6 rounded-semi border border-brand-gray/10 shadow-xl space-y-4 text-center">
+             <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gray border-b border-brand-gray/10 pb-3">Ayuda y Mantenimiento</h4>
+             <a 
+               href="https://wa.me/5492392538089" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               className="w-full py-4 bg-[#25D366] text-white font-black rounded-semi uppercase text-[10px] tracking-widest shadow-xl hover:bg-[#1ebd5a] transition-all flex items-center justify-center gap-2"
+             >
+               <MessageCircle size={18} /> Soporte Técnico
+             </a>
+             <p className="text-[9px] text-brand-gray font-bold italic uppercase">Contacto directo con desarrollador</p>
           </div>
         </div>
       </div>

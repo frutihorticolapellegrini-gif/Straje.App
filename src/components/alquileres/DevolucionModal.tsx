@@ -63,6 +63,28 @@ export const DevolucionModal: React.FC<DevolucionModalProps> = ({ alquiler, onCl
         })
       }
 
+      // NOVEDAD PUNTO 3: Sincronizar con Cuenta Corriente si existe
+      // Esto evita que siga figurando como deuda si ya se cobró en la devolución
+      const { data: cC } = await supabase.from('cuentas_corrientes')
+        .select('id, monto_pendiente')
+        .eq('alquiler_id', alquiler.id)
+        .maybeSingle()
+        
+      if (cC && cC.monto_pendiente > 0) {
+        await supabase.from('cuentas_corrientes')
+          .update({ estado: 'saldado', monto_pendiente: 0 })
+          .eq('id', cC.id)
+          
+        if (saldoPendiente > 0) {
+          await supabase.from('pagos_cuenta_corriente').insert({
+            cuenta_corriente_id: cC.id,
+            monto: saldoPendiente,
+            metodo_pago: metodoPago,
+            usuario_id: profile?.id
+          })
+        }
+      }
+
       onSave()
       onClose()
     } catch (err) {

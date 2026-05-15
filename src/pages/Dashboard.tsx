@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { Package, TrendingUp, CheckCircle2, Clock, ArrowUpRight, ArrowDownRight, Users, X } from 'lucide-react'
+import { Package, TrendingUp, CheckCircle2, Clock, ArrowUpRight, ArrowDownRight, Users, X, Bell, MessageSquare } from 'lucide-react'
 import { 
   BarChart, 
   Bar, 
@@ -26,6 +26,8 @@ export const Dashboard = () => {
   })
   const [chartData, setChartData] = useState<any[]>([])
   const [showDetailModal, setShowDetailModal] = useState(false)
+  const [pendientesDevolucion, setPendientesDevolucion] = useState<any[]>([])
+  const [filtroDia, setFiltroDia] = useState<string>('todos')
 
   useEffect(() => {
     fetchDashboardData()
@@ -113,9 +115,61 @@ export const Dashboard = () => {
       }
       
       setChartData(weeklyData)
+
+      // 5. Alertas de Devolución (Pendientes)
+      const { data: devolucionesData } = await supabase
+        .from('alquileres')
+        .select(`
+          id,
+          cliente_nombre,
+          cliente_telefono,
+          fecha_retiro,
+          fecha_devolucion,
+          estado,
+          detalles:alquiler_detalles(prenda:prenda_id(codigo, tipo))
+        `)
+        .eq('empresa_id', empresa_id)
+        .neq('estado', 'devuelto')
+        .order('fecha_devolucion', { ascending: true })
+
+      setPendientesDevolucion(devolucionesData || [])
     } catch (err) {
       console.error(err)
     }
+  }
+
+  const getDiasFaltantes = (fechaDev: string) => {
+    const hoy = new Date()
+    hoy.setHours(0,0,0,0)
+    
+    // Tratamos la fecha de la base de datos interpretándola en la zona local, 
+    // en lugar de usar getTime() crudo si la hora es distinta, 
+    // usando parseInt en los segmentos para ser exactos al día calendario.
+    const [year, month, day] = fechaDev.split('T')[0].split('-').map(Number)
+    const dev = new Date(year, month - 1, day)
+    
+    const diff = dev.getTime() - hoy.getTime()
+    return Math.ceil(diff / (1000 * 60 * 60 * 24))
+  }
+
+  const getFilteredDevoluciones = () => {
+    return pendientesDevolucion.filter(dev => {
+      if (filtroDia === 'todos') return true;
+      
+      const [year, month, day] = dev.fecha_devolucion.split('T')[0].split('-').map(Number)
+      const devDate = new Date(year, month - 1, day)
+      const diaSemana = devDate.getDay();
+      
+      if (filtroDia === 'esta_semana') {
+        const hoy = new Date();
+        hoy.setHours(0,0,0,0);
+        const limit = new Date(hoy);
+        limit.setDate(limit.getDate() + 7);
+        return devDate >= hoy && devDate <= limit;
+      }
+
+      return diaSemana.toString() === filtroDia;
+    })
   }
 
   return (
@@ -230,6 +284,69 @@ export const Dashboard = () => {
                 <p className="text-[10px] font-bold text-brand-gray uppercase">Rol: <span className="text-brand-blue">{profile?.rol}</span></p>
              </div>
           </div>
+        </div>
+      </div>
+
+      {/* Alertas de Devolución */}
+      <div className="bg-white p-8 rounded-semi shadow-xl border border-brand-gray/10">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+          <h3 className="text-xl font-black text-brand-black flex items-center gap-2 uppercase tracking-widest">
+            <Bell className="text-orange-500" size={24} /> Alertas de Devolución
+          </h3>
+          <select 
+            value={filtroDia}
+            onChange={(e) => setFiltroDia(e.target.value)}
+            className="p-3 border border-brand-gray/20 rounded-semi text-xs font-black uppercase focus:ring-2 focus:ring-brand-blue outline-none cursor-pointer bg-brand-lightGray/30"
+          >
+            <option value="todos">Todas las Pendientes</option>
+            <option value="esta_semana">Devoluciones Esta Semana</option>
+            <option value="1">Lunes</option>
+            <option value="2">Martes</option>
+            <option value="3">Miércoles</option>
+            <option value="4">Jueves</option>
+            <option value="5">Viernes</option>
+            <option value="6">Sábado</option>
+          </select>
+        </div>
+
+        <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+          {getFilteredDevoluciones().length === 0 ? (
+             <div className="text-center p-8 text-brand-gray font-black uppercase text-xs italic opacity-70">No hay devoluciones para este filtro.</div>
+          ) : getFilteredDevoluciones().map(dev => {
+            const diasFaltantes = getDiasFaltantes(dev.fecha_devolucion)
+            const esUrgente = diasFaltantes <= 1 && diasFaltantes >= 0
+            const pasoFecha = diasFaltantes < 0
+            
+            const mensajeAviso = encodeURIComponent(`Hola ${dev.cliente_nombre}, le recordamos por favor no se olvide de devolver el traje para su limpieza y control. ¡Muchas gracias!`)
+
+            return (
+              <div key={dev.id} className={`p-5 rounded-semi border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 transition-all shadow-sm ${pasoFecha ? 'border-red-500 bg-red-50' : esUrgente ? 'border-orange-500 bg-orange-50/50' : 'border-brand-blue bg-white'}`}>
+                <div>
+                  <h4 className="font-black text-brand-black uppercase text-sm">{dev.cliente_nombre}</h4>
+                  <p className="text-xs font-bold text-brand-gray">{dev.cliente_telefono || 'Sin teléfono'}</p>
+                  <p className="text-[10px] text-brand-gray uppercase mt-2 border-t border-brand-gray/10 pt-2">
+                    Alquilado: <span className="font-black">{new Date(dev.fecha_retiro).toLocaleDateString()}</span> | 
+                    Devolución: <span className="font-black text-brand-black ml-1">{new Date(dev.fecha_devolucion).toLocaleDateString()}</span>
+                  </p>
+                </div>
+                
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
+                  <div className={`px-4 py-2 rounded font-black text-[10px] uppercase text-center min-w-[120px] w-full sm:w-auto ${pasoFecha ? 'bg-red-500 text-white animate-pulse' : esUrgente ? 'bg-orange-500 text-white animate-pulse' : 'bg-brand-lightGray text-brand-gray'}`}>
+                    {pasoFecha ? `Atrasado ${Math.abs(diasFaltantes)} días` : diasFaltantes === 0 ? 'Devolver Hoy' : diasFaltantes === 1 ? 'Devolver Mañana' : `Faltan ${diasFaltantes} días`}
+                  </div>
+                  <a 
+                    href={dev.cliente_telefono ? `https://wa.me/${dev.cliente_telefono.replace(/\D/g, '')}?text=${mensajeAviso}` : '#'}
+                    target={dev.cliente_telefono ? "_blank" : "_self"}
+                    rel="noopener noreferrer"
+                    className={`flex items-center justify-center gap-2 px-6 py-3 rounded font-black text-[10px] uppercase transition-all shadow-md w-full sm:w-auto ${dev.cliente_telefono ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-brand-gray/20 text-brand-gray cursor-not-allowed'}`}
+                    onClick={(e) => { if (!dev.cliente_telefono) { e.preventDefault(); alert("El cliente no tiene teléfono cargado."); } }}
+                  >
+                    <MessageSquare size={16} /> Enviar Aviso
+                  </a>
+                </div>
+              </div>
+            )
+          })}
         </div>
       </div>
 

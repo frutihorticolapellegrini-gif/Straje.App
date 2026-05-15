@@ -41,6 +41,7 @@ export const Disponibilidad = () => {
   const [rentals, setRentals] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedType, setSelectedType] = useState<string>('TODOS')
+  const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth())
   
   // Modal Alquiler state
   const [showAlquilerModal, setShowAlquilerModal] = useState(false)
@@ -93,41 +94,64 @@ export const Disponibilidad = () => {
   // Generate periods (Weeks or Months)
   const periods = useMemo(() => {
     const list: Period[] = []
-    const temp = new Date(baseDate)
-    temp.setHours(0,0,0,0)
-
+    
     if (viewMode === 'week') {
-      // Generate 12 weeks from baseDate
-      for (let i = 0; i < 12; i++) {
+      const temp = new Date(baseDate)
+      temp.setHours(0,0,0,0)
+      const day = temp.getDay()
+      const diff = temp.getDate() - day + (day === 0 ? -6 : 1) // Lunes
+      temp.setDate(diff)
+
+      // Generar 52 semanas para tener todo el año visible
+      for (let i = 0; i < 52; i++) {
         const start = new Date(temp)
         const end = new Date(temp)
-        end.setDate(end.getDate() + 6)
+        end.setDate(end.getDate() + 6) // De Lunes a Domingo son 6 días
         
+        const formatStr = (d: Date) => `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}`
+
         list.push({
           start,
           end,
-          label: `SEM ${i + 1}\n(${start.getDate()}/${start.getMonth()+1} - ${end.getDate()}/${end.getMonth()+1})`
+          label: `SEM ${i + 1}\n(${formatStr(start)} AL ${formatStr(end)})`
         })
         temp.setDate(temp.getDate() + 7)
       }
     } else {
-      // Generate 6 months
-      temp.setDate(1)
+      // viewMode === 'month'
+      const year = baseDate.getFullYear()
+      const firstDay = new Date(year, selectedMonth, 1)
+      
+      const day = firstDay.getDay()
+      const diff = firstDay.getDate() - day + (day === 0 ? -6 : 1) // Lunes de la primer semana
+      const temp = new Date(firstDay)
+      temp.setDate(diff)
+
       for (let i = 0; i < 6; i++) {
         const start = new Date(temp)
-        const end = new Date(temp.getFullYear(), temp.getMonth() + 1, 0)
+        const end = new Date(temp)
+        end.setDate(end.getDate() + 6) // Lunes a Domingo
         
-        const monthNames = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC']
+        const startMonth = start.getMonth()
+        const endMonth = end.getMonth()
+        
+        // Si ya salimos del mes elegido y generamos al menos 4 semanas, cortamos
+        if (startMonth !== selectedMonth && endMonth !== selectedMonth && i >= 4) {
+          break;
+        }
+        
+        const formatStr = (d: Date) => `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth()+1).toString().padStart(2, '0')}`
+
         list.push({
           start,
           end,
-          label: `${monthNames[start.getMonth()]}\n${start.getFullYear()}`
+          label: `SEM ${i + 1}\n(${formatStr(start)} AL ${formatStr(end)})`
         })
-        temp.setMonth(temp.getMonth() + 1)
+        temp.setDate(temp.getDate() + 7)
       }
     }
     return list
-  }, [viewMode, baseDate])
+  }, [viewMode, baseDate, selectedMonth])
 
   const types = useMemo(() => {
     const t = Array.from(new Set(stock.map(s => s.tipo)))
@@ -285,7 +309,7 @@ export const Disponibilidad = () => {
       </header>
 
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-3 bg-white p-4 rounded-semi shadow-lg border border-brand-gray/5">
+      <div className={`grid grid-cols-1 md:grid-cols-${viewMode === 'month' ? '5' : '4'} gap-3 bg-white p-4 rounded-semi shadow-lg border border-brand-gray/5`}>
         <div className="relative col-span-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-brand-gray" size={18} />
           <input 
@@ -306,30 +330,56 @@ export const Disponibilidad = () => {
             {types.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
           </select>
         </div>
+
+        {viewMode === 'month' && (
+          <div className="relative">
+             <select 
+               value={selectedMonth}
+               onChange={(e) => setSelectedMonth(Number(e.target.value))}
+               className="w-full px-4 py-3 bg-brand-black text-white rounded-semi font-black text-xs outline-none appearance-none cursor-pointer uppercase tracking-widest text-center"
+             >
+               <option value={0}>Enero</option>
+               <option value={1}>Febrero</option>
+               <option value={2}>Marzo</option>
+               <option value={3}>Abril</option>
+               <option value={4}>Mayo</option>
+               <option value={5}>Junio</option>
+               <option value={6}>Julio</option>
+               <option value={7}>Agosto</option>
+               <option value={8}>Septiembre</option>
+               <option value={9}>Octubre</option>
+               <option value={10}>Noviembre</option>
+               <option value={11}>Diciembre</option>
+             </select>
+          </div>
+        )}
+
         <div className="flex items-center gap-2">
           <button 
             onClick={() => {
               const d = new Date(baseDate)
-              d.setDate(d.getDate() - (viewMode === 'week' ? 7 : 30))
+              d.setFullYear(d.getFullYear() - 1)
               setBaseDate(d)
             }}
             className="flex-1 p-3 bg-brand-lightGray rounded-semi hover:bg-brand-gray/20 transition-all"
+            title="Año Anterior"
           >
             <ChevronLeft size={20} className="mx-auto" />
           </button>
           <button 
             onClick={() => setBaseDate(new Date())}
-            className="px-4 py-3 bg-brand-black text-white rounded-semi font-black text-[10px] uppercase"
+            className="px-4 py-3 bg-brand-black text-white rounded-semi font-black text-[10px] uppercase min-w-[80px]"
           >
-            HOY
+            AÑO {baseDate.getFullYear()}
           </button>
           <button 
             onClick={() => {
               const d = new Date(baseDate)
-              d.setDate(d.getDate() + (viewMode === 'week' ? 7 : 30))
+              d.setFullYear(d.getFullYear() + 1)
               setBaseDate(d)
             }}
             className="flex-1 p-3 bg-brand-lightGray rounded-semi hover:bg-brand-gray/20 transition-all"
+            title="Año Siguiente"
           >
             <ChevronRight size={20} className="mx-auto" />
           </button>
@@ -371,7 +421,7 @@ export const Disponibilidad = () => {
                       <span className="font-black text-[10px] text-brand-gray uppercase leading-tight tracking-widest opacity-60">
                         {p.label.split('\n')[0]}
                       </span>
-                      <span className="font-black text-[18px] text-brand-blue bg-blue-50 py-2 rounded-semi border-2 border-brand-blue/20 shadow-sm block transform scale-y-110">
+                      <span className="font-black text-[13px] text-brand-blue bg-blue-50 py-2 px-1 rounded-semi border-2 border-brand-blue/20 shadow-sm block w-full text-center tracking-tighter">
                         {p.label.split('\n')[1].replace('(', '').replace(')', '')}
                       </span>
                     </div>

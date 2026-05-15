@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Package, CheckCircle, Search, Scissors, ChevronRight } from 'lucide-react'
+import { Package, CheckCircle, Search, Scissors, ChevronRight, AlertTriangle } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
 import { toPng } from 'html-to-image'
@@ -149,11 +149,18 @@ export const PedidosPreparar = () => {
     const diffTime = retiro.getTime() - hoy.getTime();
     const diffDays = diffTime / (1000 * 60 * 60 * 24);
     
-    // Nueva Lógica Fin de Semana (Punto Solicitado)
+    const diaSemanaHoy = hoy.getDay(); // 2 es Martes
+
+    if (diaSemanaHoy === 2) {
+      // Si es martes, marcamos como urgente/atrasado todo lo que se retira esta semana (hasta 5 dias más)
+      if (diffDays >= 0 && diffDays <= 5) {
+        return true;
+      }
+    }
+
+    // Lógica Fin de Semana (Punto Solicitado)
     const diaSemanaRetiro = retiro.getDay(); // 0: Dom, 1: Lun, 6: Sab
     if (diaSemanaRetiro === 6 || diaSemanaRetiro === 0 || diaSemanaRetiro === 1) {
-      // Si el retiro es Sábado, Domingo o Lunes, avisar desde el Jueves (4 días antes del lunes es jueves)
-      // diffDays <= 4 asegura que si hoy es Jueves y el retiro es Lunes (4 días), ya esté en rojo.
       return diffDays <= 4;
     }
 
@@ -190,6 +197,18 @@ export const PedidosPreparar = () => {
           </button>
         </div>
       </header>
+
+      {new Date().getDay() === 2 && view === 'pendientes' && (
+        <div className="bg-orange-100 border-l-8 border-orange-500 p-6 rounded-semi shadow-md flex items-start gap-4">
+          <AlertTriangle className="text-orange-500 mt-1" size={32} />
+          <div>
+            <h3 className="font-black text-orange-800 uppercase tracking-widest text-sm mb-1">Alerta de Preparación Semanal</h3>
+            <p className="text-xs font-bold text-orange-700">
+              Hoy es martes. Por favor, asegúrese de preparar todos los trajes que deben ser entregados esta semana. Estos han sido marcados con etiqueta de urgente en la lista inferior para facilitar su identificación.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white p-4 rounded-semi shadow-xl border border-brand-gray/10 flex flex-col md:flex-row gap-4">
         <div className="relative flex-1">
