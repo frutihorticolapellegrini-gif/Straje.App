@@ -183,6 +183,18 @@ export const CuentaCorriente = () => {
         }
       }
 
+      // Sincronizar con Ventas
+      if (cuentaSeleccionada.venta_id && nuevoEstado === 'saldado') {
+        const { error: ventaErr } = await supabase
+          .from('ventas')
+          .update({ estado: 'completada' })
+          .eq('id', cuentaSeleccionada.venta_id)
+          
+        if (ventaErr) {
+          console.error("Error al actualizar estado de la venta:", ventaErr)
+        }
+      }
+
       setShowPagoModal(false)
       setMontoPago('')
       setFechaProximoPago('')
@@ -599,18 +611,55 @@ export const CuentaCorriente = () => {
               <button onClick={() => setShowPagoModal(false)} className="text-white/50 hover:text-white transition-colors uppercase font-black text-xs">Cerrar</button>
             </div>
             <form onSubmit={handlePagar} className="p-8 space-y-6">
-              <div>
-                <label className="text-[10px] font-black text-brand-gray uppercase mb-1 block">Monto a Cobrar</label>
-                <input 
-                  type="number" 
-                  value={montoPago} 
-                  onChange={e => setMontoPago(e.target.value)} 
-                  className="w-full p-4 bg-brand-lightGray border-none rounded-semi font-black text-2xl text-brand-black"
-                  placeholder="0.00"
-                  max={cuentaSeleccionada.monto_pendiente}
-                  required 
-                />
-                <p className="text-[9px] font-bold text-brand-gray mt-1 uppercase">Saldo pendiente: {formatMoney(cuentaSeleccionada.monto_pendiente)}</p>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center bg-brand-lightGray/50 p-4 rounded-semi border border-brand-gray/10">
+                  <p className="text-[10px] font-black text-brand-gray uppercase">Saldo Pendiente Actual</p>
+                  <p className="text-xl font-black text-brand-orange">{formatMoney(cuentaSeleccionada.monto_pendiente)}</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    type="button" 
+                    onClick={() => setMontoPago(cuentaSeleccionada.monto_pendiente.toString())}
+                    className="py-2 bg-brand-black text-white font-black rounded-semi uppercase text-[10px] shadow-md hover:bg-brand-gray transition-all"
+                  >
+                    Pagar Total
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setMontoPago(Math.ceil(cuentaSeleccionada.monto_pendiente / 2).toString())}
+                    className="py-2 bg-brand-blue text-white font-black rounded-semi uppercase text-[10px] shadow-md hover:bg-blue-600 transition-all"
+                  >
+                    Pagar Mitad
+                  </button>
+                </div>
+
+                <div className="relative">
+                  <label className="text-[10px] font-black text-brand-gray uppercase mb-1 block">Monto a Cobrar</label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-black text-brand-black">$</span>
+                    <input 
+                      type="text" 
+                      value={montoPago ? new Intl.NumberFormat('es-AR').format(Number(montoPago.toString().replace(/\D/g, ''))) : ''} 
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        if (Number(val) <= cuentaSeleccionada.monto_pendiente) {
+                          setMontoPago(val);
+                        }
+                      }} 
+                      className="w-full pl-10 pr-4 py-4 bg-white border-2 border-brand-blue rounded-semi font-black text-3xl text-brand-black outline-none shadow-lg"
+                      placeholder="0"
+                      required 
+                    />
+                  </div>
+                </div>
+
+                {montoPago && Number(montoPago) > 0 && (
+                  <div className="flex justify-between items-center p-4 bg-orange-50 border border-orange-200 rounded-semi">
+                    <p className="text-[10px] font-black text-orange-700 uppercase">Resto a Pagar en Cuenta</p>
+                    <p className="text-lg font-black text-orange-700 italic">{formatMoney(cuentaSeleccionada.monto_pendiente - Number(montoPago))}</p>
+                  </div>
+                )}
               </div>
 
               <div>
@@ -626,15 +675,17 @@ export const CuentaCorriente = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="text-[10px] font-black text-brand-gray uppercase mb-1 block">Próximo Compromiso (Opcional)</label>
-                <input 
-                  type="date" 
-                  value={fechaProximoPago} 
-                  onChange={e => setFechaProximoPago(e.target.value)} 
-                  className="w-full p-4 bg-brand-lightGray border-none rounded-semi font-black text-xs"
-                />
-              </div>
+              {montoPago && Number(montoPago) < cuentaSeleccionada.monto_pendiente && (
+                <div>
+                  <label className="text-[10px] font-black text-brand-gray uppercase mb-1 block">Próximo Compromiso (Opcional)</label>
+                  <input 
+                    type="date" 
+                    value={fechaProximoPago} 
+                    onChange={e => setFechaProximoPago(e.target.value)} 
+                    className="w-full p-4 bg-brand-lightGray border-none rounded-semi font-black text-xs"
+                  />
+                </div>
+              )}
 
               <button type="submit" className="w-full py-4 bg-brand-black text-white font-black rounded-semi uppercase text-xs tracking-widest shadow-xl hover:bg-brand-gray transition-all">Confirmar Pago</button>
             </form>

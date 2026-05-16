@@ -87,13 +87,14 @@ export const VentaForm: React.FC<VentaFormProps> = ({ onClose, onSave }) => {
         : (modoCobro === 'total' ? total : (Number(senaMonto) || 0))
       
       const esCtaCte = esCondicional || metodoPago === 'cta_corriente' || montoAbonado < total
+      const estadoVenta = (esCondicional || montoAbonado < total) ? 'pendiente_pago' : 'completada'
 
       const { data: venta, error: vErr } = await supabase.from('ventas').insert({
         empresa_id: profile?.empresa_id, cliente_nombre: formData.cliente_nombre || 'CONSUMIDOR FINAL',
         cliente_telefono: formData.cliente_telefono, cliente_dni: formData.cliente_dni, cliente_direccion: formData.cliente_direccion,
         metodo_pago: metodoPago, subtotal, descuento: d, recargo: r, precio_total: total, cuotas: metodoPago === 'tarjeta' ? cuotas : 1, 
         usuario_id: profile?.id,
-        estado: esCtaCte ? 'pendiente_pago' : 'completada'
+        estado: estadoVenta
       }).select().single()
       if (vErr) throw vErr
 
@@ -119,7 +120,7 @@ export const VentaForm: React.FC<VentaFormProps> = ({ onClose, onSave }) => {
             venta_id: venta.id,
             monto_original: total,
             monto_pendiente: total - montoAbonado,
-            estado: montoAbonado > 0 ? 'parcial' : 'pendiente',
+            estado: (total - montoAbonado <= 0) ? 'saldado' : (montoAbonado > 0 ? 'parcial' : 'pendiente'),
             es_condicional: esCondicional
           });
         }

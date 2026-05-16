@@ -8,7 +8,10 @@ import {
   Tooltip, 
   ResponsiveContainer, 
   AreaChart,
-  Area
+  Area,
+  BarChart,
+  Bar,
+  Cell
 } from 'recharts'
 import { TrendingUp, DollarSign, Calendar, Award, Search, BarChart2 } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
@@ -33,6 +36,7 @@ export const Rentabilidad = () => {
   const [seasonData, setSeasonData] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterType, setFilterType] = useState('TODOS')
+  const [chartView, setChartView] = useState<'estacionalidad' | 'ranking'>('estacionalidad')
 
   useEffect(() => {
     fetchRentabilidadData()
@@ -168,31 +172,100 @@ export const Rentabilidad = () => {
         </div>
       </div>
 
-      {/* Seasonal Chart */}
+      {/* Chart Section */}
       <div className="bg-white p-8 rounded-semi shadow-xl border border-brand-gray/10">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <h3 className="text-sm font-black text-brand-black flex items-center gap-2 uppercase tracking-widest">
-            <Calendar className="text-brand-blue" size={20} /> Épocas de Mayor Demanda (Estacionalidad)
+            {chartView === 'estacionalidad' ? (
+              <><Calendar className="text-brand-blue" size={20} /> Épocas de Mayor Demanda</>
+            ) : (
+              <><Award className="text-brand-orange" size={20} /> Ranking de Prendas (Cantidades)</>
+            )}
           </h3>
+          <div className="flex bg-brand-lightGray p-1 rounded-semi">
+            <button 
+              onClick={() => setChartView('estacionalidad')}
+              className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all ${chartView === 'estacionalidad' ? 'bg-white shadow-md text-brand-blue' : 'text-brand-gray hover:bg-brand-gray/10'}`}
+            >
+              Estacionalidad
+            </button>
+            <button 
+              onClick={() => setChartView('ranking')}
+              className={`px-4 py-2 text-[10px] font-black uppercase rounded transition-all flex items-center gap-2 ${chartView === 'ranking' ? 'bg-white shadow-md text-brand-orange' : 'text-brand-gray hover:bg-brand-gray/10'}`}
+            >
+              <BarChart2 size={14} /> Ver Ranking Visual
+            </button>
+          </div>
         </div>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={seasonData}>
-              <defs>
-                <linearGradient id="colorAlq" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#006fee" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#006fee" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#999'}} />
-              <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#999'}} />
-              <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 'bold'}} />
-              <Area type="monotone" dataKey="alquileres" stroke="#006fee" strokeWidth={3} fillOpacity={1} fill="url(#colorAlq)" name="Total Alquileres" />
-            </AreaChart>
-          </ResponsiveContainer>
+
+        <div className="h-[350px] w-full">
+          {chartView === 'estacionalidad' ? (
+            seasonData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={seasonData}>
+                  <defs>
+                    <linearGradient id="colorAlq" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#006fee" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#006fee" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#999'}} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#999'}} />
+                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 'bold', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                  <Area type="monotone" dataKey="alquileres" stroke="#006fee" strokeWidth={4} fillOpacity={1} fill="url(#colorAlq)" name="Total Alquileres" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-brand-lightGray/20 rounded-semi border-2 border-dashed border-brand-gray/20">
+                 <BarChart2 size={48} className="text-brand-gray/30 mb-4" />
+                 <p className="text-brand-gray font-black uppercase tracking-widest text-xs">No hay datos de estacionalidad todavía.</p>
+                 <p className="text-brand-gray/50 font-bold uppercase text-[10px] mt-2">A medida que registres ventas y alquileres, el gráfico tomará color y forma.</p>
+              </div>
+            )
+          ) : (
+            stockStats.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stockStats.slice(0, 15)} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="codigo" axisLine={false} tickLine={false} tick={{fontSize: 9, fontWeight: 'bold', fill: '#999'}} angle={-45} textAnchor="end" height={60} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fontSize: 10, fontWeight: 'bold', fill: '#999'}} />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}} 
+                    contentStyle={{borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 'bold', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} 
+                    formatter={(value: any, _name: any, props: any) => [`${value} Alquileres`, props.payload.tipo]}
+                  />
+                  <Bar dataKey="total_alquileres" radius={[6, 6, 0, 0]} name="Cantidades">
+                    {
+                      stockStats.slice(0, 15).map((_entry, index) => {
+                        const totalShown = Math.min(15, stockStats.length);
+                        const isTop = index < 3;
+                        const isBottom = index >= totalShown - 3 && totalShown > 6;
+                        return (
+                          <Cell key={`cell-${index}`} fill={
+                            isTop ? '#10b981' : // Verde top 3
+                            isBottom ? '#ef4444' : // Rojo bottom 3
+                            '#3b82f6' // Azul el resto
+                          } />
+                        )
+                      })
+                    }
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-brand-lightGray/20 rounded-semi border-2 border-dashed border-brand-gray/20">
+                 <Award size={48} className="text-brand-gray/30 mb-4" />
+                 <p className="text-brand-gray font-black uppercase tracking-widest text-xs">No hay ranking disponible todavía.</p>
+              </div>
+            )
+          )}
         </div>
-        <p className="mt-4 text-[10px] text-brand-gray font-bold uppercase text-center italic">Este gráfico muestra los meses con más salida de prendas para organizar stock y personal.</p>
+        <p className="mt-6 text-[10px] text-brand-gray font-bold uppercase text-center italic">
+          {chartView === 'estacionalidad' ? 
+            'Este gráfico muestra los meses con más salida de prendas para organizar stock y personal.' : 
+            'Las barras en verde indican las más alquiladas, en rojo las menos alquiladas. Se muestran hasta los 15 productos principales.'}
+        </p>
       </div>
 
       {/* Detail Table */}
