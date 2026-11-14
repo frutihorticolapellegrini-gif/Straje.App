@@ -178,18 +178,6 @@ export const VentaForm: React.FC<VentaFormProps> = ({ onClose, onSave }) => {
     const win = window.open('', '', 'width=600,height=800'); win?.document.write(html); win?.document.close(); win?.focus(); setTimeout(() => { win?.print(); }, 500)
   }
 
-  const generateWhatsAppMessage = () => {
-    const nombreNegocio = empresa?.nombre?.toUpperCase() || 'STRAJE.APP'
-    const items = carrito.map(p => `[${p.codigo}] ${p.tipo}: ${formatMoney(p.precio_venta)}`).join('\n')
-    const msg = `*VENTA EXITOSA - ${nombreNegocio}*\n\n` +
-                `*CLIENTE:* ${formData.cliente_nombre.toUpperCase() || 'CONSUMIDOR FINAL'}\n` +
-                `*ARTÍCULOS:*\n${items}\n\n` +
-                `*TOTAL:* ${formatMoney(total)}\n` +
-                `*MÉTODO DE PAGO:* ${metodoPago.toUpperCase()}\n\n` +
-                `¡GRACIAS POR TU COMPRA!`;
-    return msg;
-  }
-
   const handleCompartirImagenDirecto = async () => {
     const el = document.getElementById(`troquel-directo-capture`);
     if (!el || !successData) return;
@@ -214,6 +202,43 @@ export const VentaForm: React.FC<VentaFormProps> = ({ onClose, onSave }) => {
       }
     } catch (err) {
       console.error(err);
+    }
+  }
+
+  const handleCompartirTicketWhatsApp = async () => {
+    const el = document.getElementById(`ticket-venta-capture`);
+    if (!el || !successData) return;
+    
+    setLoading(true);
+    try {
+      const dataUrl = await toPng(el, { quality: 0.95, backgroundColor: '#fff' });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `ticket-venta-${formData.cliente_nombre || 'cliente'}.png`, { type: 'image/png' });
+
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: 'Ticket de Venta',
+          text: `Hola ${formData.cliente_nombre}, aquí tienes tu comprobante.`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.download = `ticket-venta-${formData.cliente_nombre || 'cliente'}.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        const phone = formData.cliente_telefono?.replace(/\D/g, '');
+        if (phone) {
+           window.open(`https://wa.me/${phone}?text=${encodeURIComponent("Hola, adjunto el ticket de compra. (Por favor, pega la imagen que se acaba de descargar)")}`, '_blank');
+        } else {
+           alert("Imagen descargada. Por favor, adjúntala en WhatsApp.");
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al generar la imagen.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -257,10 +282,55 @@ export const VentaForm: React.FC<VentaFormProps> = ({ onClose, onSave }) => {
             <h2 className="text-4xl font-black text-brand-black uppercase italic tracking-tighter">¡Venta Exitosa!</h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto">
               <button onClick={handlePrint} className="flex items-center justify-center gap-2 bg-brand-black text-white font-black py-4 rounded-semi hover:bg-brand-gray transition-all shadow-xl uppercase text-[10px] tracking-widest"><Printer size={18} /> Imprimir Remito</button>
-              <button onClick={() => window.open(`https://wa.me/${formData.cliente_telefono?.replace(/\D/g,'')}?text=${encodeURIComponent(generateWhatsAppMessage())}`, '_blank')} className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-4 rounded-semi hover:bg-[#1ebd5a] transition-all shadow-xl uppercase text-[10px] tracking-widest"><MessageCircle size={18} /> WhatsApp</button>
+              <button onClick={handleCompartirTicketWhatsApp} disabled={loading} className="flex items-center justify-center gap-2 bg-[#25D366] text-white font-black py-4 rounded-semi hover:bg-[#1ebd5a] transition-all shadow-xl uppercase text-[10px] tracking-widest"><MessageCircle size={18} /> WhatsApp</button>
               <button onClick={handleGenerarTroquel} disabled={loading} className="flex items-center justify-center gap-2 bg-violet-600 text-white font-black py-4 rounded-semi hover:bg-violet-700 transition-all shadow-xl uppercase text-[10px] tracking-widest"><Scissors size={18} /> Generar Troquel</button>
             </div>
             <button onClick={onClose} className="px-10 py-3 bg-brand-lightGray text-brand-gray font-black rounded-semi uppercase text-xs">Cerrar</button>
+
+            {/* CAPTURE HIDDEN TICKET WHATSAPP */}
+            <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+              <div id={`ticket-venta-capture`} className="w-[400px] bg-white p-6 font-sans text-black" style={{ color: '#000', fontFamily: "'Inter', sans-serif" }}>
+                <div className="text-center border-b-2 border-black pb-3 mb-4">
+                  {empresa?.logo_url ? (
+                    <img src={`${empresa.logo_url}?v=${Date.now()}`} style={{ maxHeight: '80px', display: 'block', margin: '0 auto 10px auto' }} alt="Logo" />
+                  ) : (
+                    <h1 className="m-0 text-center text-xl font-black">{empresa?.nombre?.toUpperCase() || 'STRAJE.APP'}</h1>
+                  )}
+                  <p className="m-0 mt-1 text-sm font-bold">{empresa?.nombre?.toUpperCase() || 'STRAJE.APP'}</p>
+                  <p className="m-0 text-xs">VENTA | {new Date().toLocaleDateString()}</p>
+                </div>
+                
+                <p className="mb-2 text-xs"><strong>CLIENTE:</strong> {formData.cliente_nombre?.toUpperCase() || 'CONSUMIDOR FINAL'}</p>
+                
+                <table className="w-full mb-3 text-xs border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="text-left border-b border-black py-1">DESCRIPCIÓN</th>
+                      <th className="text-right border-b border-black py-1">PRECIO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {successData.prendas.map((p, i) => (
+                      <tr key={i}>
+                        <td className="py-1 border-b border-gray-300 border-dotted">[{p.codigo}] {p.tipo}</td>
+                        <td className="py-1 border-b border-gray-300 border-dotted text-right">{formatMoney(p.precio_venta)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                
+                <div className="font-bold text-sm mt-4 border-t-2 border-black pt-2 space-y-1">
+                  <div className="flex justify-between"><span>SUBTOTAL:</span><span>{formatMoney(subtotal)}</span></div>
+                  {d > 0 && <div className="flex justify-between text-green-700"><span>DESCUENTO:</span><span>-{formatMoney(d)}</span></div>}
+                  {r > 0 && <div className="flex justify-between text-red-700"><span>RECARGO ({cuotas} CUOTAS):</span><span>+{formatMoney(r)}</span></div>}
+                  <div className="flex justify-between mt-2 pt-1 border-t border-black text-lg"><span>TOTAL:</span><span>{formatMoney(total)}</span></div>
+                </div>
+                
+                <div className="text-center mt-8 pt-3 border-t border-gray-200 text-[10px]">
+                  <p><strong>{((empresa as any)?.aviso_legal || 'GRACIAS POR TU COMPRA').toUpperCase()}</strong></p>
+                </div>
+              </div>
+            </div>
 
             {/* CAPTURE HIDDEN DIRECTO */}
             <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>

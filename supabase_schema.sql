@@ -414,3 +414,28 @@ FOR SELECT USING (empresa_id = get_user_empresa_id());
 DROP POLICY IF EXISTS "Insertar historial stock su empresa" ON public.historial_stock;
 CREATE POLICY "Insertar historial stock su empresa" ON public.historial_stock 
 FOR INSERT WITH CHECK (empresa_id = get_user_empresa_id());
+- -   T a b l a :   V I S I T A S _ A P P  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . v i s i t a s _ a p p   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   u u i d _ g e n e r a t e _ v 4 ( ) ,  
+         f e c h a   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,  
+         o r i g e n   T E X T   D E F A U L T   ' a p p '  
+ ) ;  
+  
+ - -   P o l Ã ­ t i c a s   V i s i t a s  
+ A L T E R   T A B L E   p u b l i c . v i s i t a s _ a p p   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+ D R O P   P O L I C Y   I F   E X I S T S   " T o d o s   p u e d e n   i n s e r t a r   v i s i t a s "   O N   p u b l i c . v i s i t a s _ a p p ;   C R E A T E   P O L I C Y   " T o d o s   p u e d e n   i n s e r t a r   v i s i t a s "   O N   p u b l i c . v i s i t a s _ a p p   F O R   I N S E R T   W I T H   C H E C K   ( t r u e ) ;  
+ D R O P   P O L I C Y   I F   E X I S T S   " P r o g r a m a d o r   p u e d e   v e r   v i s i t a s "   O N   p u b l i c . v i s i t a s _ a p p ;   C R E A T E   P O L I C Y   " P r o g r a m a d o r   p u e d e   v e r   v i s i t a s "   O N   p u b l i c . v i s i t a s _ a p p   F O R   S E L E C T   U S I N G   ( t r u e ) ;  
+  
+ - -   T a b l a :   G A S T O S _ P R O G R A M A D O R  
+ C R E A T E   T A B L E   I F   N O T   E X I S T S   p u b l i c . g a s t o s _ p r o g r a m a d o r   (  
+         i d   U U I D   P R I M A R Y   K E Y   D E F A U L T   u u i d _ g e n e r a t e _ v 4 ( ) ,  
+         c o n c e p t o   T E X T   N O T   N U L L ,  
+         m o n t o   D E C I M A L ( 1 0 , 2 )   N O T   N U L L ,  
+         f e c h a   T I M E S T A M P T Z   D E F A U L T   N O W ( ) ,  
+         u s u a r i o _ i d   U U I D   R E F E R E N C E S   p u b l i c . u s u a r i o s ( i d )  
+ ) ;  
+  
+ - -   P o l Ã ­ t i c a s   G a s t o s  
+ A L T E R   T A B L E   p u b l i c . g a s t o s _ p r o g r a m a d o r   E N A B L E   R O W   L E V E L   S E C U R I T Y ;  
+ D R O P   P O L I C Y   I F   E X I S T S   " P r o g r a m a d o r   g e s t i o n a   g a s t o s "   O N   p u b l i c . g a s t o s _ p r o g r a m a d o r ;   C R E A T E   P O L I C Y   " P r o g r a m a d o r   g e s t i o n a   g a s t o s "   O N   p u b l i c . g a s t o s _ p r o g r a m a d o r   F O R   A L L   U S I N G   ( t r u e ) ;  
+ 

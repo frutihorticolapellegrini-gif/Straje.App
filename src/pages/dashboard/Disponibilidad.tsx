@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -32,6 +33,7 @@ interface Period {
 
 export const Disponibilidad = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [zoomLevel, setZoomLevel] = useState(1) // 1 = 100%, 1.2 = 120%, etc.
@@ -253,9 +255,9 @@ export const Disponibilidad = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black uppercase tracking-tighter italic flex items-center gap-3">
-            <LayoutGrid className="text-brand-blue" size={32} /> Recuadro de Alquileres
+            <LayoutGrid className="text-brand-blue" size={32} /> {t('modules.availability.title')}
           </h2>
-          <p className="text-brand-gray font-medium text-sm">Matriz de disponibilidad en tiempo real</p>
+          <p className="text-brand-gray font-medium text-sm">{t('modules.availability.subtitle')}</p>
         </div>
         
         <div className="flex items-center gap-3">

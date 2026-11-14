@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { useLanguage } from '../context/LanguageContext'
 import { Package, TrendingUp, CheckCircle2, Clock, ArrowUpRight, ArrowDownRight, Users, X, Bell, MessageSquare } from 'lucide-react'
 import { 
   BarChart, 
@@ -15,6 +16,7 @@ import { formatMoney } from '../utils/formatters'
 
 export const Dashboard = () => {
   const { profile, empresa } = useAuth()
+  const { t } = useLanguage()
   const [stats, setStats] = useState({
     totalPrendas: 0,
     alquiladasHoy: 0,
@@ -75,7 +77,15 @@ export const Dashboard = () => {
       })
 
       // 4. Gráfico Semanal (Lunes a Hoy)
-      const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb']
+      const diasSemana = [
+        t('dashboard.days_of_week.sun'),
+        t('dashboard.days_of_week.mon'),
+        t('dashboard.days_of_week.tue'),
+        t('dashboard.days_of_week.wed'),
+        t('dashboard.days_of_week.thu'),
+        t('dashboard.days_of_week.fri'),
+        t('dashboard.days_of_week.sat')
+      ]
       const ahora = new Date()
       const diaActual = ahora.getDay() // 0-6
       
@@ -106,7 +116,7 @@ export const Dashboard = () => {
         const isHoy = tempDate.toDateString() === ahora.toDateString()
 
         weeklyData.push({
-          name: isHoy ? 'HOY' : diasSemana[tempDate.getDay()],
+          name: isHoy ? t('dashboard.today') : diasSemana[tempDate.getDay()],
           ventas: movimientosDia.filter(m => m.tipo === 'ingreso').reduce((acc, m) => acc + Number(m.monto), 0),
           gastos: movimientosDia.filter(m => m.tipo === 'egreso').reduce((acc, m) => acc + Number(m.monto), 0)
         })
@@ -176,14 +186,14 @@ export const Dashboard = () => {
     <div className="max-w-7xl mx-auto space-y-8 pb-12">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-black text-brand-black uppercase tracking-tighter italic">Resumen de Operaciones</h2>
-          <p className="text-brand-gray font-bold text-sm uppercase tracking-wider">Hola, {profile?.nombre}. Control de ventas y stock en tiempo real.</p>
+          <h2 className="text-3xl font-black text-brand-black uppercase tracking-tighter italic">{t('dashboard.title')}</h2>
+          <p className="text-brand-gray font-bold text-sm uppercase tracking-wider">{t('dashboard.subtitle', { name: profile?.nombre || '' })}</p>
         </div>
         <button 
           onClick={fetchDashboardData}
           className="px-4 py-2 bg-brand-lightGray text-brand-black rounded-semi font-black text-[10px] uppercase hover:bg-brand-gray/10 transition-all"
         >
-          Actualizar Datos
+          {t('dashboard.refresh_button')}
         </button>
       </header>
 
@@ -194,25 +204,25 @@ export const Dashboard = () => {
           className="bg-brand-black text-white p-6 rounded-semi shadow-2xl border-b-8 border-brand-blue relative overflow-hidden text-left hover:scale-[1.02] transition-transform group"
         >
           <TrendingUp className="absolute -right-4 -bottom-4 w-24 h-24 opacity-10 group-hover:scale-110 transition-transform" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand-blue mb-1">Ventas HOY (Clic detalle)</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand-blue mb-1">{t('dashboard.sales_today')}</p>
           <p className="text-4xl font-black">{formatMoney(stats.ventasHoy)}</p>
         </button>
 
         <div className="bg-white p-6 rounded-semi shadow-xl border border-brand-gray/10 relative overflow-hidden">
           <Users className="absolute -right-4 -bottom-4 w-24 h-24 opacity-5 text-brand-blue" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">Alquileres Creados</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">{t('dashboard.rentals_created')}</p>
           <p className="text-4xl font-black text-brand-black">{stats.alquiladasHoy}</p>
         </div>
 
         <div className="bg-white p-6 rounded-semi shadow-xl border border-brand-gray/10 relative overflow-hidden">
           <Package className="absolute -right-4 -bottom-4 w-24 h-24 opacity-5 text-brand-black" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">Unidades en Stock</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">{t('dashboard.stock_units')}</p>
           <p className="text-4xl font-black text-brand-black">{stats.totalPrendas}</p>
         </div>
 
         <div className="bg-white p-6 rounded-semi shadow-xl border border-brand-gray/10 relative overflow-hidden">
           <Clock className="absolute -right-4 -bottom-4 w-24 h-24 opacity-5 text-red-500" />
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">En Lavandería</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-brand-gray mb-1">{t('dashboard.in_laundry')}</p>
           <p className="text-4xl font-black text-red-500">{stats.pendientesLavanderia}</p>
         </div>
       </div>
@@ -221,9 +231,9 @@ export const Dashboard = () => {
         <div className="lg:col-span-2 bg-white p-8 rounded-semi shadow-xl border border-brand-gray/10">
           <div className="flex justify-between items-center mb-8">
             <h3 className="text-sm font-black text-brand-black flex items-center gap-2 uppercase tracking-widest">
-              <TrendingUp className="text-brand-blue" size={20} /> VENTAS Y GASTOS (SEMANA ACTUAL)
+              <TrendingUp className="text-brand-blue" size={20} /> {t('dashboard.chart_title')}
             </h3>
-            <span className="text-[10px] font-black bg-brand-lightGray px-2 py-1 rounded text-brand-gray uppercase">Lunes a Hoy</span>
+            <span className="text-[10px] font-black bg-brand-lightGray px-2 py-1 rounded text-brand-gray uppercase">{t('dashboard.chart_subtitle')}</span>
           </div>
           <div className="h-[350px] w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -245,8 +255,8 @@ export const Dashboard = () => {
                   cursor={{fill: '#f8fafc'}} 
                   contentStyle={{borderRadius: '12px', border: 'none', fontSize: '12px', fontWeight: 'bold', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} 
                 />
-                <Bar dataKey="ventas" fill="#22c55e" radius={[4, 4, 0, 0]} name="Ingresos ($)" barSize={25} />
-                <Bar dataKey="gastos" fill="#ef4444" radius={[4, 4, 0, 0]} name="Egresos ($)" barSize={25} />
+                <Bar dataKey="ventas" fill="#22c55e" radius={[4, 4, 0, 0]} name={t('dashboard.chart_income')} barSize={25} />
+                <Bar dataKey="gastos" fill="#ef4444" radius={[4, 4, 0, 0]} name={t('dashboard.chart_expense')} barSize={25} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -254,22 +264,22 @@ export const Dashboard = () => {
 
         <div className="space-y-6">
           <div className="bg-brand-black text-white p-6 rounded-semi shadow-2xl border-t-4 border-brand-blue">
-            <h3 className="text-xs font-black uppercase tracking-widest text-brand-blue mb-6">Estado Operativo</h3>
+            <h3 className="text-xs font-black uppercase tracking-widest text-brand-blue mb-6">{t('dashboard.system_status')}</h3>
             <div className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                  <p className="text-xs font-bold uppercase tracking-wider">Sistema Online</p>
+                  <p className="text-xs font-bold uppercase tracking-wider">{t('dashboard.system_online')}</p>
                 </div>
                 <CheckCircle2 className="text-green-500" size={16} />
               </div>
               
               <div className="pt-4 border-t border-white/10">
-                <p className="text-[10px] text-white/50 uppercase font-black mb-3">Balance Rápido Hoy</p>
+                <p className="text-[10px] text-white/50 uppercase font-black mb-3">{t('dashboard.quick_balance')}</p>
                 <div className="flex justify-between items-end">
                   <span className="text-2xl font-black">{formatMoney(stats.ventasHoy - stats.gastosHoy)}</span>
                   <span className={`text-[10px] font-black uppercase px-2 py-1 rounded ${stats.ventasHoy >= stats.gastosHoy ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
-                    {stats.ventasHoy >= stats.gastosHoy ? 'Superávit' : 'Déficit'}
+                    {stats.ventasHoy >= stats.gastosHoy ? t('dashboard.surplus') : t('dashboard.deficit')}
                   </span>
                 </div>
               </div>
@@ -277,11 +287,11 @@ export const Dashboard = () => {
           </div>
 
           <div className="bg-white p-6 rounded-semi border border-brand-gray/10 shadow-xl">
-             <h3 className="text-xs font-black uppercase tracking-widest text-brand-black mb-4">Información de Sesión</h3>
+             <h3 className="text-xs font-black uppercase tracking-widest text-brand-black mb-4">{t('dashboard.session_info')}</h3>
              <div className="space-y-2">
-                <p className="text-[10px] font-bold text-brand-gray uppercase">Empresa: <span className="text-brand-black">{empresa?.nombre}</span></p>
-                <p className="text-[10px] font-bold text-brand-gray uppercase">Usuario: <span className="text-brand-black">{profile?.nombre}</span></p>
-                <p className="text-[10px] font-bold text-brand-gray uppercase">Rol: <span className="text-brand-blue">{profile?.rol}</span></p>
+                <p className="text-[10px] font-bold text-brand-gray uppercase">{t('dashboard.session_company')} <span className="text-brand-black">{empresa?.nombre}</span></p>
+                <p className="text-[10px] font-bold text-brand-gray uppercase">{t('dashboard.session_user')} <span className="text-brand-black">{profile?.nombre}</span></p>
+                <p className="text-[10px] font-bold text-brand-gray uppercase">{t('dashboard.session_role')} <span className="text-brand-blue">{profile?.rol}</span></p>
              </div>
           </div>
         </div>
@@ -291,27 +301,27 @@ export const Dashboard = () => {
       <div className="bg-white p-8 rounded-semi shadow-xl border border-brand-gray/10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h3 className="text-xl font-black text-brand-black flex items-center gap-2 uppercase tracking-widest">
-            <Bell className="text-orange-500" size={24} /> Alertas de Devolución
+            <Bell className="text-orange-500" size={24} /> {t('dashboard.alerts_title')}
           </h3>
           <select 
             value={filtroDia}
             onChange={(e) => setFiltroDia(e.target.value)}
             className="p-3 border border-brand-gray/20 rounded-semi text-xs font-black uppercase focus:ring-2 focus:ring-brand-blue outline-none cursor-pointer bg-brand-lightGray/30"
           >
-            <option value="todos">Todas las Pendientes</option>
-            <option value="esta_semana">Devoluciones Esta Semana</option>
-            <option value="1">Lunes</option>
-            <option value="2">Martes</option>
-            <option value="3">Miércoles</option>
-            <option value="4">Jueves</option>
-            <option value="5">Viernes</option>
-            <option value="6">Sábado</option>
+            <option value="todos">{t('dashboard.filter_all')}</option>
+            <option value="esta_semana">{t('dashboard.filter_this_week')}</option>
+            <option value="1">{t('dashboard.days_names.monday')}</option>
+            <option value="2">{t('dashboard.days_names.tuesday')}</option>
+            <option value="3">{t('dashboard.days_names.wednesday')}</option>
+            <option value="4">{t('dashboard.days_names.thursday')}</option>
+            <option value="5">{t('dashboard.days_names.friday')}</option>
+            <option value="6">{t('dashboard.days_names.saturday')}</option>
           </select>
         </div>
 
         <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
           {getFilteredDevoluciones().length === 0 ? (
-             <div className="text-center p-8 text-brand-gray font-black uppercase text-xs italic opacity-70">No hay devoluciones para este filtro.</div>
+             <div className="text-center p-8 text-brand-gray font-black uppercase text-xs italic opacity-70">{t('dashboard.no_alerts')}</div>
           ) : getFilteredDevoluciones().map(dev => {
             const diasFaltantes = getDiasFaltantes(dev.fecha_devolucion)
             const esUrgente = diasFaltantes <= 1 && diasFaltantes >= 0
@@ -323,25 +333,25 @@ export const Dashboard = () => {
               <div key={dev.id} className={`p-5 rounded-semi border-l-8 flex flex-col md:flex-row justify-between items-center gap-4 transition-all shadow-sm ${pasoFecha ? 'border-red-500 bg-red-50' : esUrgente ? 'border-orange-500 bg-orange-50/50' : 'border-brand-blue bg-white'}`}>
                 <div>
                   <h4 className="font-black text-brand-black uppercase text-sm">{dev.cliente_nombre}</h4>
-                  <p className="text-xs font-bold text-brand-gray">{dev.cliente_telefono || 'Sin teléfono'}</p>
+                  <p className="text-xs font-bold text-brand-gray">{dev.cliente_telefono || t('dashboard.without_phone')}</p>
                   <p className="text-[10px] text-brand-gray uppercase mt-2 border-t border-brand-gray/10 pt-2">
-                    Alquilado: <span className="font-black">{new Date(dev.fecha_retiro).toLocaleDateString()}</span> | 
-                    Devolución: <span className="font-black text-brand-black ml-1">{new Date(dev.fecha_devolucion).toLocaleDateString()}</span>
+                    {t('dashboard.rented_on')} <span className="font-black">{new Date(dev.fecha_retiro).toLocaleDateString()}</span> | 
+                    {t('dashboard.return_on')} <span className="font-black text-brand-black ml-1">{new Date(dev.fecha_devolucion).toLocaleDateString()}</span>
                   </p>
                 </div>
                 
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full sm:w-auto">
                   <div className={`px-4 py-2 rounded font-black text-[10px] uppercase text-center min-w-[120px] w-full sm:w-auto ${pasoFecha ? 'bg-red-500 text-white animate-pulse' : esUrgente ? 'bg-orange-500 text-white animate-pulse' : 'bg-brand-lightGray text-brand-gray'}`}>
-                    {pasoFecha ? `Atrasado ${Math.abs(diasFaltantes)} días` : diasFaltantes === 0 ? 'Devolver Hoy' : diasFaltantes === 1 ? 'Devolver Mañana' : `Faltan ${diasFaltantes} días`}
+                    {pasoFecha ? t('dashboard.overdue_days', { days: Math.abs(diasFaltantes) }) : diasFaltantes === 0 ? t('dashboard.return_today') : diasFaltantes === 1 ? t('dashboard.return_tomorrow') : t('dashboard.days_left', { days: diasFaltantes })}
                   </div>
                   <a 
                     href={dev.cliente_telefono ? `https://wa.me/${dev.cliente_telefono.replace(/\D/g, '')}?text=${mensajeAviso}` : '#'}
                     target={dev.cliente_telefono ? "_blank" : "_self"}
                     rel="noopener noreferrer"
                     className={`flex items-center justify-center gap-2 px-6 py-3 rounded font-black text-[10px] uppercase transition-all shadow-md w-full sm:w-auto ${dev.cliente_telefono ? 'bg-green-500 text-white hover:bg-green-600' : 'bg-brand-gray/20 text-brand-gray cursor-not-allowed'}`}
-                    onClick={(e) => { if (!dev.cliente_telefono) { e.preventDefault(); alert("El cliente no tiene teléfono cargado."); } }}
+                    onClick={(e) => { if (!dev.cliente_telefono) { e.preventDefault(); alert(t('dashboard.no_phone_alert')); } }}
                   >
-                    <MessageSquare size={16} /> Enviar Aviso
+                    <MessageSquare size={16} /> {t('dashboard.send_notice')}
                   </a>
                 </div>
               </div>
@@ -356,7 +366,7 @@ export const Dashboard = () => {
           <div className="bg-white rounded-semi shadow-2xl max-w-md w-full overflow-hidden border-t-8 border-brand-blue animate-in fade-in zoom-in duration-300">
             <div className="p-6 border-b border-brand-gray/10 flex justify-between items-center bg-brand-lightGray/50">
               <h3 className="text-xl font-black text-brand-black uppercase italic flex items-center gap-2">
-                <TrendingUp className="text-brand-blue" /> Detalle del Día
+                <TrendingUp className="text-brand-blue" /> {t('dashboard.modal_title')}
               </h3>
               <button onClick={() => setShowDetailModal(false)} className="p-2 hover:bg-brand-gray/10 rounded-full transition-all">
                 <X size={24} />
@@ -367,12 +377,12 @@ export const Dashboard = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-50 p-6 rounded-semi border border-green-100 flex flex-col items-center text-center">
                   <ArrowUpRight className="text-green-600 mb-2" size={24} />
-                  <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-1">Ventas Totales</p>
+                  <p className="text-[10px] font-black text-green-700 uppercase tracking-widest mb-1">{t('dashboard.modal_total_sales')}</p>
                   <p className="text-2xl font-black text-brand-black">{formatMoney(stats.ventasHoy)}</p>
                 </div>
                 <div className="bg-red-50 p-6 rounded-semi border border-red-100 flex flex-col items-center text-center">
                   <ArrowDownRight className="text-red-600 mb-2" size={24} />
-                  <p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">Gastos Totales</p>
+                  <p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1">{t('dashboard.modal_total_expenses')}</p>
                   <p className="text-2xl font-black text-brand-black">{formatMoney(stats.gastosHoy)}</p>
                 </div>
               </div>
@@ -380,14 +390,14 @@ export const Dashboard = () => {
               <div className="bg-brand-black p-6 rounded-semi shadow-xl text-center">
                 <div className="flex items-center justify-center gap-3 mb-2">
                    <Package className="text-brand-blue" size={20} />
-                   <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">Unidades Vendidas / Alquileres</p>
+                   <p className="text-[10px] font-black text-white/60 uppercase tracking-widest">{t('dashboard.modal_units_title')}</p>
                 </div>
                 <p className="text-5xl font-black text-white">{stats.unidadesHoy}</p>
-                <p className="text-[9px] text-brand-blue font-black uppercase mt-2">Operaciones registradas hoy</p>
+                <p className="text-[9px] text-brand-blue font-black uppercase mt-2">{t('dashboard.modal_units_subtitle')}</p>
               </div>
 
               <div className="pt-4 border-t border-brand-gray/10 flex justify-between items-center">
-                <p className="text-xs font-black text-brand-gray uppercase">Balance Neto:</p>
+                <p className="text-xs font-black text-brand-gray uppercase">{t('dashboard.modal_net_balance')}</p>
                 <p className={`text-xl font-black ${stats.ventasHoy - stats.gastosHoy >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {formatMoney(stats.ventasHoy - stats.gastosHoy)}
                 </p>
@@ -399,7 +409,7 @@ export const Dashboard = () => {
                 onClick={() => setShowDetailModal(false)}
                 className="w-full py-4 bg-brand-black text-white rounded-semi font-black text-xs uppercase tracking-widest hover:bg-brand-gray transition-all"
                >
-                 Entendido
+                 {t('dashboard.modal_close')}
                </button>
             </div>
           </div>

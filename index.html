@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="pwa-icon.png" />
-    <link rel="apple-touch-icon" href="pwa-icon.png">
+    <link rel="icon" type="image/png" href="/pwa-icon.png" />
+    <link rel="apple-touch-icon" href="/pwa-icon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#000000" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -12,23 +12,36 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="manifest" href="/manifest.json" />
-    <title>Straje.App - Gestión de Tienda</title>
+    <title>Straje.App - Plataforma de Gestión Retail</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // LIMPIEZA AGRESIVA DE SERVICE WORKERS Y CACHÉ
+      // LIMPIEZA INMEDIATA DE SERVICE WORKERS VIEJOS EN DESARROLLO/LOCALHOST
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.getRegistrations().then(function(registrations) {
-          for(let registration of registrations) {
-            registration.unregister();
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for (let r of registrations) {
+              r.unregister();
+            }
+          });
+          if ('caches' in window) {
+            caches.keys().then(function(names) {
+              for (let name of names) caches.delete(name);
+            });
           }
-        });
-        caches.keys().then(function(names) {
-          for (let name of names) caches.delete(name);
-        });
-        console.log('Service Workers y Caché eliminados.');
+        } else {
+          window.addEventListener('load', function() {
+            navigator.serviceWorker.register('/sw.js')
+              .then(function(reg) {
+                reg.update();
+              })
+              .catch(function(err) {
+                console.log('SW registration error:', err);
+              });
+          });
+        }
       }
     </script>
   </body>

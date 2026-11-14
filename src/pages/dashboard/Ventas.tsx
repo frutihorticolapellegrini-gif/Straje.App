@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { ShoppingBag, Plus, Search, XCircle, MessageSquare, X } from 'lucide-react'
+import { useLanguage } from '../../context/LanguageContext'
+import { ShoppingBag, Plus, Search, XCircle, MessageSquare, X, Calendar, CalendarDays, History } from 'lucide-react'
 import { VentaForm } from '../../components/ventas/VentaForm'
 import { formatMoney } from '../../utils/formatters'
 
@@ -25,10 +26,13 @@ export interface Venta {
 
 export const Ventas = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [ventas, setVentas] = useState<Venta[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0])
+  const [filterMode, setFilterMode] = useState<'hoy' | 'fecha' | 'total'>('hoy')
+  const [fechaDesde, setFechaDesde] = useState(new Date().toLocaleDateString('sv-SE'))
+  const [fechaHasta, setFechaHasta] = useState(new Date().toLocaleDateString('sv-SE'))
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null)
   const [showDetails, setShowDetails] = useState(false)
@@ -139,27 +143,47 @@ export const Ventas = () => {
     }
   }
 
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+
   const filteredVentas = ventas.filter(v => {
-    const term = searchTerm.toLowerCase()
+    const term = searchTerm.toLowerCase().trim()
     const codesString = v.detalles?.map(d => d.prenda?.codigo).join(' ') || ''
     
-    // Parsear fecha para comparar con el filtro de YYYY-MM-DD
-    const vDate = new Date(v.creado_en).toLocaleDateString('sv-SE') // Formato YYYY-MM-DD en zona local
-    const matchesDate = filterDate ? vDate === filterDate : true
+    // Parsear fecha para comparar con el formato YYYY-MM-DD en zona local
+    const vDate = new Date(v.creado_en).toLocaleDateString('sv-SE')
 
-    const matchesSearch = 
+    let matchesDate = true
+    if (filterMode === 'hoy') {
+      matchesDate = vDate === todayStr
+    } else if (filterMode === 'fecha') {
+      if (fechaDesde && fechaHasta) {
+        matchesDate = vDate >= fechaDesde && vDate <= fechaHasta
+      } else if (fechaDesde) {
+        matchesDate = vDate >= fechaDesde
+      } else if (fechaHasta) {
+        matchesDate = vDate <= fechaHasta
+      }
+    } else if (filterMode === 'total') {
+      matchesDate = true
+    }
+
+    const matchesSearch = !term ||
       (v.cliente_nombre && v.cliente_nombre.toLowerCase().includes(term)) ||
       codesString.toLowerCase().includes(term)
 
     return matchesDate && matchesSearch
   })
 
+  const totalCobrado = filteredVentas
+    .filter(v => v.estado !== 'cancelada')
+    .reduce((sum, v) => sum + (Number(v.precio_total) || 0), 0)
+
   return (
-    <div className="max-w-7xl mx-auto flex flex-col h-full space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-24 animate-in fade-in duration-300">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-2 uppercase tracking-tighter italic">
-            <ShoppingBag className="text-brand-blue" size={32} /> Ventas Realizadas
+            <ShoppingBag className="text-brand-blue" size={32} /> {t('modules.sales.title')}
           </h2>
           <p className="text-brand-gray font-bold text-sm uppercase tracking-widest">Historial de salidas directas y facturación.</p>
         </div>
@@ -168,35 +192,111 @@ export const Ventas = () => {
           onClick={() => setIsFormOpen(true)}
           className="w-full md:w-auto px-8 py-4 bg-brand-blue text-white font-black rounded-semi shadow-xl shadow-brand-blue/30 hover:bg-blue-600 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
         >
-          <Plus size={20} /> Nueva Venta
+          <Plus size={20} /> {t('modules.sales.new_sale')}
         </button>
       </header>
 
-      <div className="bg-white p-4 rounded-semi shadow-xl border border-brand-gray/10 flex flex-col md:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="bg-white p-4 md:p-6 rounded-semi shadow-xl border border-brand-gray/10 space-y-4">
+        {/* BUSCADOR */}
+        <div className="relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={20} />
           <input 
             type="text" 
             placeholder="BUSCAR VENTA POR CLIENTE O CÓDIGO DE PRENDA..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue uppercase tracking-tighter"
+            className="w-full pl-12 pr-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue uppercase tracking-tighter text-sm"
           />
         </div>
-        <div className="w-full md:w-auto">
-          <input 
-            type="date"
-            value={filterDate}
-            onChange={(e) => setFilterDate(e.target.value)}
-            className="w-full md:w-auto px-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue text-brand-black cursor-pointer"
-          />
+
+        {/* BOTONES DE FILTRO DEBAJO DEL BUSCADOR + TOTAL EN VERDE */}
+        <div className="flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4 pt-3 border-t border-brand-gray/10">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setFilterMode('hoy')}
+              className={`px-5 py-3 rounded-semi font-black uppercase text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                filterMode === 'hoy'
+                  ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/30'
+                  : 'bg-brand-lightGray text-brand-black hover:bg-brand-gray/20'
+              }`}
+            >
+              <Calendar size={16} />
+              Ventas Hoy
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('fecha')}
+              className={`px-5 py-3 rounded-semi font-black uppercase text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                filterMode === 'fecha'
+                  ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/30'
+                  : 'bg-brand-lightGray text-brand-black hover:bg-brand-gray/20'
+              }`}
+            >
+              <CalendarDays size={16} />
+              Ventas por Fecha
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFilterMode('total')}
+              className={`px-5 py-3 rounded-semi font-black uppercase text-xs tracking-wider transition-all flex items-center gap-2 cursor-pointer ${
+                filterMode === 'total'
+                  ? 'bg-brand-blue text-white shadow-lg shadow-brand-blue/30'
+                  : 'bg-brand-lightGray text-brand-black hover:bg-brand-gray/20'
+              }`}
+            >
+              <History size={16} />
+              Venta Total
+            </button>
+          </div>
+
+          {/* RANGO DE FECHAS (VISIBLE SI SELECCIONA 'VENTAS POR FECHA') */}
+          {filterMode === 'fecha' && (
+            <div className="flex flex-wrap items-center gap-3 bg-brand-lightGray/70 p-2.5 rounded-semi border border-brand-gray/10 animate-in fade-in">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-brand-gray tracking-wider">Desde:</span>
+                <input 
+                  type="date"
+                  value={fechaDesde}
+                  onChange={(e) => setFechaDesde(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-brand-gray/20 rounded font-black text-xs outline-none focus:ring-2 focus:ring-brand-blue text-brand-black cursor-pointer uppercase"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase text-brand-gray tracking-wider">Hasta:</span>
+                <input 
+                  type="date"
+                  value={fechaHasta}
+                  onChange={(e) => setFechaHasta(e.target.value)}
+                  className="px-3 py-1.5 bg-white border border-brand-gray/20 rounded font-black text-xs outline-none focus:ring-2 focus:ring-brand-blue text-brand-black cursor-pointer uppercase"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TOTAL EN VERDE EN UN RECUADRO */}
+          <div className="bg-emerald-50 border-2 border-emerald-500 text-emerald-800 px-5 py-3 rounded-semi flex items-center justify-between xl:justify-end gap-5 shadow-sm self-stretch xl:self-auto">
+            <div className="flex flex-col text-left">
+              <span className="text-[9px] font-black uppercase tracking-widest text-emerald-700">
+                Total {filterMode === 'hoy' ? 'Hoy' : filterMode === 'fecha' ? 'por Fecha' : 'Histórico'}
+              </span>
+              <span className="text-[10px] font-bold text-emerald-600 uppercase">
+                {filteredVentas.filter(v => v.estado !== 'cancelada').length} {filteredVentas.filter(v => v.estado !== 'cancelada').length === 1 ? 'venta' : 'ventas'}
+              </span>
+            </div>
+            <span className="text-2xl md:text-3xl font-black text-emerald-600 tracking-tight font-mono">
+              {formatMoney(totalCobrado)}
+            </span>
+          </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-semi shadow-2xl border border-brand-gray/10 overflow-hidden flex-1">
-        <div className="overflow-x-auto">
+      <div className="bg-white rounded-semi shadow-2xl border border-brand-gray/10 overflow-hidden">
+        <div className="overflow-x-auto overflow-y-auto max-h-[620px] custom-scrollbar">
           <table className="w-full text-left border-collapse min-w-[900px]">
-            <thead>
+            <thead className="sticky top-0 z-10 bg-brand-black shadow-sm">
               <tr className="bg-brand-black text-white text-[10px] uppercase tracking-widest font-bold">
                 <th className="p-4">Fecha/Hora</th>
                 <th className="p-4">Prendas Vendidas</th>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { Calendar, Plus, Search, CheckCircle, Clock } from 'lucide-react'
 import { AlquilerForm } from '../../components/alquileres/AlquilerForm'
 import { DevolucionModal } from '../../components/alquileres/DevolucionModal'
@@ -29,6 +30,7 @@ export interface Alquiler {
 
 export const Alquileres = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [alquileres, setAlquileres] = useState<Alquiler[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -105,7 +107,7 @@ export const Alquileres = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-2 uppercase tracking-tighter italic">
-            <Calendar className="text-brand-blue" size={32} /> Gestión de Alquileres
+            <Calendar className="text-brand-blue" size={32} /> {t('modules.rentals.title')}
           </h2>
           <p className="text-brand-gray font-bold text-sm uppercase tracking-widest">Control de reservas y entregas.</p>
         </div>
@@ -114,7 +116,7 @@ export const Alquileres = () => {
           onClick={() => setIsFormOpen(true)}
           className="w-full md:w-auto px-8 py-4 bg-brand-blue text-white font-black rounded-semi shadow-xl shadow-brand-blue/30 hover:bg-blue-600 transition-all uppercase tracking-widest flex items-center justify-center gap-2"
         >
-          <Plus size={20} /> Nueva Reserva
+          <Plus size={20} /> {t('modules.rentals.new_rental')}
         </button>
       </header>
 
@@ -123,7 +125,7 @@ export const Alquileres = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={20} />
           <input 
             type="text" 
-            placeholder="BUSCAR POR CLIENTE O CÓDIGO DE PRENDA..."
+            placeholder={t('common.search')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-brand-lightGray border-none rounded-semi font-black outline-none focus:ring-2 focus:ring-brand-blue uppercase tracking-tighter"
@@ -136,19 +138,19 @@ export const Alquileres = () => {
           <table className="w-full text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-brand-black text-white text-[10px] uppercase tracking-widest font-bold">
-                <th className="p-4">Retiro / Devolución</th>
-                <th className="p-4">Prendas</th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4 text-center">Estado</th>
+                <th className="p-4">{t('modules.rentals.th_out_date')} / {t('modules.rentals.th_return_date')}</th>
+                <th className="p-4">{t('modules.rentals.th_items')}</th>
+                <th className="p-4">{t('modules.rentals.th_client')}</th>
+                <th className="p-4 text-center">{t('modules.rentals.th_status')}</th>
                 <th className="p-4 text-right">Saldo Pendiente</th>
-                <th className="p-4 text-center">Acciones</th>
+                <th className="p-4 text-center">{t('common.actions')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-gray/10">
               {loading ? (
-                <tr><td colSpan={6} className="p-12 text-center text-brand-gray animate-pulse font-black uppercase text-xs">Cargando Alquileres...</td></tr>
+                <tr><td colSpan={6} className="p-12 text-center text-brand-gray animate-pulse font-black uppercase text-xs">{t('common.loading')}</td></tr>
               ) : filteredAlquileres.length === 0 ? (
-                <tr><td colSpan={6} className="p-12 text-center text-brand-gray font-black uppercase text-xs italic">No hay alquileres registrados</td></tr>
+                <tr><td colSpan={6} className="p-12 text-center text-brand-gray font-black uppercase text-xs italic">{t('common.no_data')}</td></tr>
               ) : (
                 filteredAlquileres.map(alquiler => {
                   const diasFaltantes = getDiasFaltantes(alquiler.fecha_devolucion)
@@ -214,7 +216,7 @@ export const Alquileres = () => {
                             title="Registrar Devolución"
                           >
                             <CheckCircle size={14} />
-                            <span className="text-[9px] font-black uppercase">Devolver</span>
+                            <span className="text-[9px] font-black uppercase">{t('modules.rentals.btn_return')}</span>
                           </button>
                         )}
                         

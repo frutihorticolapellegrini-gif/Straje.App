@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Calendar, Filter, FileText, ArrowUpRight, ArrowDownRight, Scale, CreditCard, Printer } from 'lucide-react'
+import { useLanguage } from '../../context/LanguageContext'
+import { Calendar, Filter, FileText, ArrowUpRight, ArrowDownRight, Scale, CreditCard, Printer, MessageCircle } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
 export const Historial = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [movimientos, setMovimientos] = useState<any[]>([])
 
@@ -117,6 +119,38 @@ export const Historial = () => {
     printWindow.document.close()
   }
 
+  const handleWhatsApp = async () => {
+    const el = document.getElementById('historial-capture');
+    if (!el) return;
+    setLoading(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(el, { quality: 0.95, backgroundColor: '#fff' });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `historial-caja.png`, { type: 'image/png' });
+
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: 'Historial de Caja',
+          text: `Adjunto el historial de caja.`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.download = `historial-caja.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        window.open(`https://wa.me/?text=${encodeURIComponent("Adjunto el historial de caja. (Por favor, pega la imagen que se acaba de descargar)")}`, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al generar la imagen.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const totalIngresos = movimientos.filter(m => m.tipo === 'ingreso').reduce((acc, m) => acc + m.monto, 0)
   const totalEgresos = movimientos.filter(m => m.tipo === 'egreso').reduce((acc, m) => acc + m.monto, 0)
   const saldoNeto = totalIngresos - totalEgresos
@@ -126,17 +160,24 @@ export const Historial = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-2 uppercase tracking-tighter italic">
-            <FileText className="text-brand-blue" size={32} /> Historial General de Caja
+            <FileText className="text-brand-blue" size={32} /> {t('modules.cash_history.title')}
           </h2>
-          <p className="text-brand-gray font-bold text-sm uppercase tracking-wider">Balance global y auditoría de todos los movimientos.</p>
+          <p className="text-brand-gray font-bold text-sm uppercase tracking-wider">{t('modules.cash_history.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={handleImprimirHistorial}
-            className="p-3 bg-white text-brand-black border-2 border-brand-black rounded-semi hover:bg-brand-lightGray transition-all"
+            className="flex items-center gap-2 p-3 bg-white text-brand-black border-2 border-brand-black rounded-semi hover:bg-brand-lightGray transition-all font-bold text-xs uppercase"
             title="Imprimir Historial"
           >
-            <Printer size={20} />
+            <Printer size={18} /> {t('modules.cash_history.print_btn')}
+          </button>
+          <button 
+            onClick={handleWhatsApp} 
+            className="flex items-center gap-2 p-3 bg-[#25D366] text-white rounded-semi hover:bg-[#1ebd5a] transition-all font-bold text-xs uppercase shadow-xl" 
+            title="Compartir por WhatsApp"
+          >
+            <MessageCircle size={18} /> WhatsApp
           </button>
         </div>
       </header>
@@ -144,17 +185,17 @@ export const Historial = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-6 rounded-semi border border-brand-gray/10 shadow-xl relative overflow-hidden">
           <ArrowUpRight className="absolute -right-4 -top-4 w-20 h-20 opacity-5 text-green-500" />
-          <p className="text-[10px] text-brand-gray uppercase font-black tracking-widest mb-1">Ingresos</p>
+          <p className="text-[10px] text-brand-gray uppercase font-black tracking-widest mb-1">{t('modules.cash_history.income')}</p>
           <p className="text-3xl font-black text-green-500">{formatMoney(totalIngresos)}</p>
         </div>
         <div className="bg-white p-6 rounded-semi border border-brand-gray/10 shadow-xl relative overflow-hidden">
           <ArrowDownRight className="absolute -right-4 -top-4 w-20 h-20 opacity-5 text-red-500" />
-          <p className="text-[10px] text-brand-gray uppercase font-black tracking-widest mb-1">Egresos / Gastos</p>
+          <p className="text-[10px] text-brand-gray uppercase font-black tracking-widest mb-1">{t('modules.cash_history.expenses')}</p>
           <p className="text-3xl font-black text-red-500">{formatMoney(totalEgresos)}</p>
         </div>
         <div className="bg-brand-black p-6 rounded-semi shadow-2xl relative overflow-hidden border-b-4 border-brand-blue text-center">
           <Scale className="absolute -right-4 -top-4 w-20 h-20 opacity-10 text-brand-blue" />
-          <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-1">Saldo Neto del Período</p>
+          <p className="text-[10px] text-white/50 uppercase font-black tracking-widest mb-1">{t('modules.cash_history.net_balance')}</p>
           <p className="text-4xl font-black text-white">{formatMoney(saldoNeto)}</p>
         </div>
       </div>
@@ -165,7 +206,7 @@ export const Historial = () => {
             {(['hoy', '30dias', '6meses', 'todo'] as const).map(f => (
               <button key={f} onClick={() => setRangoRapido(f)}
                 className={`px-4 py-2 rounded-semi text-[10px] font-black uppercase transition-all ${rangoRapido === f ? 'bg-brand-black text-white shadow-lg' : 'text-brand-gray hover:text-brand-black'}`}>
-                {f === 'hoy' ? 'Hoy' : f === '30dias' ? '30 Días' : f === '6meses' ? '6 Meses' : 'Todo'}
+                {f === 'hoy' ? t('modules.cash_history.range_today') : f === '30dias' ? t('modules.cash_history.range_30days') : f === '6meses' ? t('modules.cash_history.range_6months') : t('modules.cash_history.range_all')}
               </button>
             ))}
           </div>
@@ -184,16 +225,16 @@ export const Historial = () => {
             <Filter size={14} className="text-brand-blue" />
             <select value={tipoFiltro} onChange={e => setTipoFiltro(e.target.value)}
               className="bg-brand-lightGray px-4 py-2 rounded-semi font-bold text-[10px] uppercase outline-none border border-brand-gray/10">
-              <option value="todos">Todos los Movimientos</option>
-              <option value="ingreso">Ingresos</option>
-              <option value="egreso">Egresos</option>
+              <option value="todos">{t('modules.cash_history.filter_all')}</option>
+              <option value="ingreso">{t('modules.cash_history.filter_income')}</option>
+              <option value="egreso">{t('modules.cash_history.filter_expenses')}</option>
             </select>
             <select value={metodoFiltro} onChange={e => setMetodoFiltro(e.target.value)}
               className="bg-brand-lightGray px-4 py-2 rounded-semi font-bold text-[10px] uppercase outline-none border border-brand-gray/10">
-              <option value="todos">Todos los Métodos</option>
-              <option value="efectivo">Efectivo</option>
-              <option value="transferencia">Transferencia</option>
-              <option value="tarjeta">Tarjeta</option>
+              <option value="todos">{t('modules.cash_history.filter_methods_all')}</option>
+              <option value="efectivo">{t('modules.cash_history.filter_cash')}</option>
+              <option value="transferencia">{t('modules.cash_history.filter_transfer')}</option>
+              <option value="tarjeta">{t('modules.cash_history.filter_card')}</option>
             </select>
           </div>
         </div>
@@ -204,11 +245,11 @@ export const Historial = () => {
           <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-brand-black text-white text-[10px] uppercase tracking-widest font-bold">
-                <th className="p-4 w-40">Fecha y Hora</th>
-                <th className="p-4">Concepto / Detalle Operativo</th>
-                <th className="p-4 text-center w-32">Método</th>
-                <th className="p-4 w-48">Responsable</th>
-                <th className="p-4 text-right w-40">Monto Final</th>
+                <th className="p-4 w-40">{t('modules.cash_history.th_datetime')}</th>
+                <th className="p-4">{t('modules.cash_history.th_concept')}</th>
+                <th className="p-4 text-center w-32">{t('modules.cash_history.th_method')}</th>
+                <th className="p-4 w-48">{t('modules.cash_history.th_responsible')}</th>
+                <th className="p-4 text-right w-40">{t('modules.cash_history.th_final_amount')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-gray/10">
@@ -255,6 +296,43 @@ export const Historial = () => {
                   </tr>
                 ))
               )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* HIDDEN WHATSAPP CAPTURE CONTAINER */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div id="historial-capture" style={{ width: '800px', backgroundColor: '#fff', padding: '20px', color: '#000', fontFamily: 'Arial, sans-serif' }}>
+          <div style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px' }}>
+            <h1 style={{ margin: 0, fontSize: '24px' }}>STRAJE.APP - REPORTE DE CAJA</h1>
+            <p style={{ margin: '5px 0 0 0' }}>PERIODO: {fechaDesde} AL {fechaHasta}</p>
+          </div>
+          <div style={{ margin: '20px 0', padding: '10px', border: '2px solid #000' }}>
+            <p style={{ margin: '5px 0' }}><strong>TOTAL INGRESOS:</strong> {formatMoney(totalIngresos)}</p>
+            <p style={{ margin: '5px 0' }}><strong>TOTAL EGRESOS:</strong> {formatMoney(totalEgresos)}</p>
+            <p style={{ margin: '5px 0' }}><strong>SALDO NETO:</strong> {formatMoney(saldoNeto)}</p>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px', marginTop: '15px' }}>
+            <thead>
+              <tr>
+                <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>FECHA</th>
+                <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>CONCEPTO</th>
+                <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>METODO</th>
+                <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>TIPO</th>
+                <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>MONTO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movimientos.map(m => (
+                <tr key={m.id}>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{new Date(m.fecha_movimiento).toLocaleDateString()}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{m.concepto}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{m.metodo_pago}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{m.tipo}</td>
+                  <td style={{ border: '1px solid #000', padding: '6px' }}>{formatMoney(m.monto)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

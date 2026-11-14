@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { 
   MessageCircle, 
   Search, 
@@ -22,6 +23,7 @@ import { formatMoney } from '../../utils/formatters'
 
 export const CuentaCorriente = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [clientes, setClientes] = useState<any[]>([])
   const [searchTerm, setSearchTerm] = useState('')
@@ -290,7 +292,7 @@ export const CuentaCorriente = () => {
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-3 uppercase tracking-tighter italic">
-            <MessageCircle className="text-brand-orange" size={32} /> Cuenta Corriente
+            <MessageCircle className="text-brand-orange" size={32} /> {t('modules.checking_account.title')}
           </h2>
           <p className="text-brand-gray font-bold text-sm uppercase tracking-widest mt-1">Gestión de deudas y pagos de clientes.</p>
         </div>

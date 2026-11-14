@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { 
   XAxis, 
   YAxis, 
@@ -13,7 +14,7 @@ import {
   Bar,
   Cell
 } from 'recharts'
-import { TrendingUp, DollarSign, Calendar, Award, Search, BarChart2 } from 'lucide-react'
+import { TrendingUp, DollarSign, Calendar, Award, Search, BarChart2, Printer, MessageCircle } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
 interface ProfitItem {
@@ -31,6 +32,7 @@ interface ProfitItem {
 
 export const Rentabilidad = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [loading, setLoading] = useState(true)
   const [stockStats, setStockStats] = useState<ProfitItem[]>([])
   const [seasonData, setSeasonData] = useState<any[]>([])
@@ -139,13 +141,80 @@ export const Rentabilidad = () => {
   const totalRecaudado = stockStats.reduce((acc, s) => acc + s.rentabilidad_total, 0)
   const topPrenda = stockStats[0]
 
+  const handleImprimir = () => {
+    const html = document.getElementById('rentabilidad-capture')?.innerHTML || '';
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>REPORTE DE RENTABILIDAD</title>
+          <style>
+            @page { size: A4; margin: 10mm; }
+            body { font-family: 'Arial', sans-serif; font-size: 11px; color: #000; }
+            table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+            th, td { border: 1px solid #000; padding: 6px; text-align: left; }
+            th { background-color: #f0f0f0; }
+            .header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          ${html}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  const handleWhatsApp = async () => {
+    const el = document.getElementById('rentabilidad-capture');
+    if (!el) return;
+    setLoading(true);
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(el, { quality: 0.95, backgroundColor: '#fff' });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `rentabilidad.png`, { type: 'image/png' });
+
+      if (navigator.share) {
+        await navigator.share({
+          files: [file],
+          title: 'Reporte de Rentabilidad',
+          text: `Adjunto el reporte de rentabilidad.`
+        });
+      } else {
+        const link = document.createElement('a');
+        link.download = `rentabilidad.png`;
+        link.href = dataUrl;
+        link.click();
+        
+        window.open(`https://wa.me/?text=${encodeURIComponent("Adjunto el reporte de rentabilidad. (Por favor, pega la imagen que se acaba de descargar)")}`, '_blank');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al generar la imagen.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 p-2">
-      <header>
-        <h2 className="text-3xl font-black text-brand-black uppercase tracking-tighter italic flex items-center gap-3">
-          <BarChart2 className="text-brand-blue" size={32} /> Control de Rentabilidad
-        </h2>
-        <p className="text-brand-gray font-medium">Análisis de rendimiento y estacionalidad de prendas</p>
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+        <div>
+          <h2 className="text-3xl font-black text-brand-black uppercase tracking-tighter italic flex items-center gap-3">
+            <BarChart2 className="text-brand-blue" size={32} /> {t('modules.profitability.title')}
+          </h2>
+          <p className="text-brand-gray font-medium">{t('modules.profitability.subtitle')}</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={handleImprimir} className="flex items-center gap-2 p-3 bg-white text-brand-black border-2 border-brand-black rounded-semi hover:bg-brand-lightGray transition-all font-bold text-xs uppercase" title={t('common.print')}>
+            <Printer size={18} /> {t('common.print')}
+          </button>
+          <button onClick={handleWhatsApp} className="flex items-center gap-2 p-3 bg-[#25D366] text-white rounded-semi hover:bg-[#1ebd5a] transition-all font-bold text-xs uppercase shadow-xl" title="Compartir por WhatsApp">
+            <MessageCircle size={18} /> WhatsApp
+          </button>
+        </div>
       </header>
 
       {/* KPI Cards */}
@@ -336,6 +405,43 @@ export const Rentabilidad = () => {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* HIDDEN PRINT/WHATSAPP CONTAINER */}
+      <div style={{ position: 'absolute', left: '-9999px', top: 0 }}>
+        <div id="rentabilidad-capture" style={{ width: '800px', backgroundColor: '#fff', padding: '20px', color: '#000', fontFamily: 'Arial, sans-serif' }}>
+           <div className="header" style={{ textAlign: 'center', borderBottom: '2px solid #000', paddingBottom: '10px', marginBottom: '20px' }}>
+             <h1 style={{ margin: 0, fontSize: '24px' }}>STRAJE.APP - REPORTE DE RENTABILIDAD</h1>
+             <p style={{ margin: '5px 0 0 0' }}>FECHA: {new Date().toLocaleDateString()}</p>
+           </div>
+           
+           <div style={{ marginBottom: '20px', border: '2px solid #000', padding: '10px' }}>
+             <p style={{ margin: '5px 0' }}><strong>TOTAL RECAUDADO (VIDA ÚTIL):</strong> {formatMoney(totalRecaudado)}</p>
+             <p style={{ margin: '5px 0' }}><strong>PRENDA MÁS RENTABLE:</strong> [{topPrenda?.codigo}] {topPrenda?.tipo}</p>
+             <p style={{ margin: '5px 0' }}><strong>RENTABILIDAD PROMEDIO:</strong> {formatMoney(totalRecaudado / (stockStats.length || 1))}</p>
+           </div>
+
+           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+             <thead>
+               <tr>
+                 <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>CÓDIGO</th>
+                 <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'left', backgroundColor: '#f0f0f0' }}>PRENDA</th>
+                 <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'center', backgroundColor: '#f0f0f0' }}>ALQUILERES</th>
+                 <th style={{ border: '1px solid #000', padding: '6px', textAlign: 'right', backgroundColor: '#f0f0f0' }}>RECAUDACIÓN</th>
+               </tr>
+             </thead>
+             <tbody>
+               {filteredStats.map((s, i) => (
+                 <tr key={i}>
+                   <td style={{ border: '1px solid #000', padding: '6px' }}>[{s.codigo}]</td>
+                   <td style={{ border: '1px solid #000', padding: '6px' }}>{s.tipo} - {s.talle} {s.color}</td>
+                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'center' }}>{s.total_alquileres}</td>
+                   <td style={{ border: '1px solid #000', padding: '6px', textAlign: 'right' }}>{formatMoney(s.rentabilidad_total)}</td>
+                 </tr>
+               ))}
+             </tbody>
+           </table>
         </div>
       </div>
     </div>

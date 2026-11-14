@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { Package, CheckCircle, Search, Scissors, ChevronRight, AlertTriangle } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
@@ -31,6 +32,7 @@ interface Pedido {
 
 export const PedidosPreparar = () => {
   const { profile, empresa } = useAuth()
+  const { t } = useLanguage()
   const [pedidos, setPedidos] = useState<Pedido[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -177,9 +179,9 @@ export const PedidosPreparar = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-3 uppercase tracking-tighter italic">
-            <Package className="text-brand-blue" size={32} /> Pedidos a Preparar
+            <Package className="text-brand-blue" size={32} /> {t('modules.to_prepare.title')}
           </h2>
-          <p className="text-brand-gray font-bold text-sm uppercase tracking-widest">Agenda de separación y entrega de prendas.</p>
+          <p className="text-brand-gray font-bold text-sm uppercase tracking-widest">{t('modules.to_prepare.subtitle')}</p>
         </div>
         
         <div className="flex bg-white p-1 rounded-semi shadow-md border border-brand-gray/10">

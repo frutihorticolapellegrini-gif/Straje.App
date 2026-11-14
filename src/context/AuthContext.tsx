@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import type { Session, User } from '@supabase/supabase-js'
+import { recordLoginEvent } from '../lib/tracking'
 
 interface EmpresaProfile {
   id: string
@@ -125,6 +126,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (empError) throw empError
       
       setEmpresa(empData as EmpresaProfile)
+
+      // Registrar login y actividad de forma segura
+      recordLoginEvent({
+        userId: userProfile.id,
+        email: userProfile.email,
+        nombre: userProfile.nombre,
+        empresaId: userProfile.empresa_id,
+        localidad: (empData as any)?.localidad
+      }).catch(() => {})
 
     } catch (error) {
       console.error('Error fetching auth data:', error)

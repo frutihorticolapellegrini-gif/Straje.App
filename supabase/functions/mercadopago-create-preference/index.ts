@@ -14,14 +14,26 @@ serve(async (req) => {
   }
 
   try {
-    const { empresa_id, email_empresa } = await req.json();
+    const { empresa_id, email_empresa, amount, plan_title, plan_type } = await req.json();
     const MP_ACCESS_TOKEN = Deno.env.get("MP_ACCESS_TOKEN");
 
     if (!MP_ACCESS_TOKEN) throw new Error("Falta MP_ACCESS_TOKEN en los Secrets de Supabase");
 
-    // Lógica de Precios según el Cliente (Normalizar email para evitar errores de espacios o mayúsculas)
-    const email_limpio = email_empresa?.toLowerCase().trim();
-    const unit_price = email_limpio === 'cache_tienda2026@hotmail.com' ? 80000 : 40000;
+    // Lógica de Precios con soporte oficial de planes y descuento del 50%:
+    // - Si el frontend envía `amount` explícito mayor a 0, se respeta estrictamente
+    // - En caso contrario, se determina según el plan (Estándar $15.000 / $30.000, Premium $30.000 / $60.000)
+    let unit_price = 15000;
+    const requestedAmount = Number(amount);
+
+    if (requestedAmount > 0) {
+      unit_price = requestedAmount;
+    } else if (plan_type === 'premium') {
+      unit_price = 30000; // Promo por defecto para nuevos usuarios
+    } else {
+      unit_price = 15000; // Promo Estándar por defecto
+    }
+
+    const title = plan_title || (plan_type === 'premium' ? "Suscripción Premium (-50%) - Straje.App" : "Suscripción Estándar (-50%) - Straje.App");
 
     const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
       method: "POST",
@@ -31,7 +43,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         items: [{
-          title: email_empresa === 'cache_tienda2026@hotmail.com' ? "Suscripción Premium - Straje.App" : "Suscripción Mensual - Straje.App",
+          title: title,
           quantity: 1,
           unit_price: unit_price,
           currency_id: "ARS"
@@ -48,15 +60,27 @@ serve(async (req) => {
 
     const data = await response.json();
 
-    return new Response(JSON.stringify({ init_point: data.init_point }), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    if (!response.ok) {
+      console.error("Error Mercado Pago API:", data);
+      throw new Error(data.message || "Error al crear preferencia en Mercado Pago");
+    }
+
+    return new Response(
+      JSON.stringify({ init_point: data.init_point, id: data.id }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      }
+    );
 
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      status: 400,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
+    console.error("Error en function mercadopago:", error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      }
+    );
   }
-})
+});

@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
-import { Plus, Search, Edit, BarChart2, Package } from 'lucide-react'
+import { useLanguage } from '../../context/LanguageContext'
+import { Plus, Search, Edit, BarChart2, Package, Printer, TrendingUp } from 'lucide-react'
 import { StockForm } from '../../components/stock/StockForm'
 import { StockTotalsModal } from '../../components/stock/StockTotalsModal'
 import { PedidoSugeridoModal } from '../../components/stock/PedidoSugeridoModal'
 import { ImpresionPreciosModal } from '../../components/stock/ImpresionPreciosModal'
 import { AjustePrecioModal } from '../../components/stock/AjustePrecioModal'
 import { formatMoney } from '../../utils/formatters'
-import { Printer, TrendingUp } from 'lucide-react'
 
 export interface Prenda {
   id: string
@@ -29,6 +29,7 @@ export interface Prenda {
 
 export const Stock = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const isDueno = profile?.rol === 'dueño' || profile?.rol === 'programador'
 
   const [prendas, setPrendas] = useState<Prenda[]>([])
@@ -169,7 +170,7 @@ export const Stock = () => {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-2 uppercase tracking-tighter italic">
-            <Package size={32} className="text-brand-blue" /> Gestión de Inventario
+            <Package size={32} className="text-brand-blue" /> {t('modules.stock.title')}
           </h2>
           <p className="text-brand-gray font-bold text-sm uppercase tracking-widest">Control centralizado de todas tus prendas y stock.</p>
         </div>
@@ -180,13 +181,13 @@ export const Stock = () => {
                 onClick={() => setIsTotalsOpen(true)}
                 className="flex-1 md:flex-none px-6 py-3 bg-brand-black text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-brand-gray transition-all uppercase text-xs tracking-widest shadow-xl border-b-4 border-brand-blue"
               >
-                <BarChart2 size={18} /> Balance Total
+                <BarChart2 size={18} /> {t('modules.stock.totals')}
               </button>
               <button 
                 onClick={() => setIsPedidoSugeridoOpen(true)}
                 className="flex-1 md:flex-none px-6 py-3 bg-[#009EE3] text-white rounded-semi font-black flex items-center justify-center gap-2 hover:bg-blue-600 transition-all uppercase text-xs tracking-widest shadow-xl border-b-4 border-blue-800"
               >
-                Armar Pedido
+                {t('modules.stock.suggested_order')}
               </button>
             </>
           )}
@@ -194,20 +195,20 @@ export const Stock = () => {
             onClick={() => { setEditingPrenda(null); setIsFormOpen(true) }}
             className="flex-1 md:flex-none px-4 py-2 bg-brand-blue text-white rounded-semi font-black flex items-center justify-center gap-1 hover:bg-blue-600 shadow-xl shadow-brand-blue/30 transition-all uppercase text-[10px] tracking-tighter"
           >
-            <Plus size={14} /> Nueva
+            <Plus size={14} /> {t('modules.stock.new_item')}
           </button>
           <button 
             onClick={() => setIsPrintPreciosOpen(true)}
             className="flex-1 md:flex-none px-4 py-2 bg-white text-brand-black border-2 border-brand-black rounded-semi font-black flex items-center justify-center gap-1 hover:bg-brand-lightGray transition-all uppercase text-[10px] tracking-tighter"
           >
-            <Printer size={14} /> Precios
+            <Printer size={14} /> {t('modules.stock.print_labels')}
           </button>
           {isDueno && (
             <button 
               onClick={() => setIsAjustePrecioOpen(true)}
               className="flex-1 md:flex-none px-4 py-2 bg-amber-500 text-white rounded-semi font-black flex items-center justify-center gap-1 hover:bg-amber-600 transition-all uppercase text-[10px] tracking-tighter shadow-lg border-b-2 border-amber-700"
             >
-              <TrendingUp size={14} /> Aumento/Baja
+              <TrendingUp size={14} /> {t('modules.stock.price_adjustment')}
             </button>
           )}
           <button 

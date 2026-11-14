@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { supabaseAdminAuth } from '../../lib/supabaseSecondary'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { UserMinus, UserCheck, AlertCircle, Eye, EyeOff, Calendar, List, Shield } from 'lucide-react'
 import { CredencialesModal } from '../../components/dashboard/CredencialesModal'
 import { PermisosModal } from '../../components/dashboard/PermisosModal'
@@ -18,6 +19,7 @@ interface Empleado {
 
 export const Employees = () => {
   const { profile, empresa } = useAuth()
+  const { t } = useLanguage()
   const [empleados, setEmpleados] = useState<Empleado[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -129,7 +131,7 @@ export const Employees = () => {
     <div className="max-w-5xl mx-auto">
       <header className="mb-8 flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-brand-black">Gestión de Empleados</h2>
+          <h2 className="text-2xl font-bold text-brand-black">{t('modules.employees.title')}</h2>
           <p className="text-brand-gray">Agrega o suspende a tus vendedores.</p>
         </div>
         

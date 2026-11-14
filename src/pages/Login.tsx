@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { LogIn, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { Link } from 'react-router-dom'
+import { recordLoginEvent } from '../lib/tracking'
+import { useLanguage } from '../context/LanguageContext'
 
 export const Login = () => {
+  const { t } = useLanguage()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,16 +38,18 @@ export const Login = () => {
     }
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (error) throw error
+      // Registrar evento de login (asíncrono sin bloquear)
+      recordLoginEvent({ userId: authData.user?.id, email }).catch(() => {})
       // El AuthContext detectará el cambio de sesión y nos redirigirá al Dashboard.
     } catch (err: any) {
       console.error(err)
-      setError('Credenciales incorrectas o problema de conexión.')
+      setError(t('auth.login.error_generic'))
     } finally {
       setLoading(false)
     }
@@ -53,7 +58,7 @@ export const Login = () => {
   return (
     <div className="bg-brand-white p-8 rounded-semi shadow-xl">
       <div className="mb-6 text-center">
-        <p className="text-brand-gray text-sm mt-1">Ingresa tus credenciales para continuar</p>
+        <p className="text-brand-gray text-sm mt-1">{t('auth.login.subtitle')}</p>
       </div>
 
       {error && (
@@ -66,7 +71,7 @@ export const Login = () => {
       <form onSubmit={handleLogin} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-brand-dark mb-1">
-            Correo Electrónico
+            {t('auth.login.email_label')}
           </label>
           <input
             type="email"
@@ -81,7 +86,7 @@ export const Login = () => {
 
         <div>
           <label className="block text-sm font-medium text-brand-dark mb-1">
-            Contraseña
+            {t('auth.login.password_label')}
           </label>
           <div className="relative">
             <input
@@ -113,7 +118,7 @@ export const Login = () => {
             className="h-4 w-4 text-brand-blue focus:ring-brand-blue border-brand-gray/30 rounded"
           />
           <label htmlFor="remember-me" className="ml-2 block text-sm text-brand-dark cursor-pointer">
-            Recordar mis datos
+            {t('auth.login.remember_me')}
           </label>
         </div>
 
@@ -123,20 +128,20 @@ export const Login = () => {
           className="w-full btn-primary flex justify-center items-center gap-2 mt-6"
         >
           {loading ? (
-            <span className="animate-pulse">Verificando...</span>
+            <span className="animate-pulse">{t('auth.login.loading_button')}</span>
           ) : (
             <>
               <LogIn size={18} />
-              <span>Ingresar</span>
+              <span>{t('auth.login.submit_button')}</span>
             </>
           )}
         </button>
       </form>
 
       <div className="mt-6 text-center pt-4 border-t border-brand-gray/20">
-        <p className="text-sm text-brand-dark mb-2">¿No tienes cuenta de negocio?</p>
+        <p className="text-sm text-brand-dark mb-2">{t('auth.login.no_account')}</p>
         <Link to="/registro" className="text-sm font-semibold text-brand-blue hover:text-brand-blueHover">
-          Crear Cuenta (30 Días Gratis)
+          {t('auth.login.register_link')}
         </Link>
       </div>
     </div>

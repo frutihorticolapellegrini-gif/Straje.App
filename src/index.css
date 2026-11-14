@@ -32,3 +32,20 @@ body {
 .animate-spin-reverse {
   animation: spin-reverse 1.5s linear infinite;
 }
+
+/* Scrollbar personalizado para tablas y paneles */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #3b82f6;
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #1d4ed8;
+}

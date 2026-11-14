@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../../context/AuthContext'
+import { useLanguage } from '../../context/LanguageContext'
 import { Waves, CheckCircle, Search, RefreshCw } from 'lucide-react'
 import { formatMoney } from '../../utils/formatters'
 
@@ -14,6 +15,7 @@ interface PrendaLavanderia {
 
 export const Lavanderia = () => {
   const { profile } = useAuth()
+  const { t } = useLanguage()
   const [prendas, setPrendas] = useState<PrendaLavanderia[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -86,7 +88,7 @@ export const Lavanderia = () => {
       <header className="mb-8 flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-black text-brand-black flex items-center gap-3 italic uppercase tracking-tighter">
-            <Waves className="text-brand-blue animate-pulse" size={32} /> Control de Lavandería
+            <Waves className="text-brand-blue animate-pulse" size={32} /> {t('modules.laundry.title')}
           </h2>
           <p className="text-brand-gray font-medium">Prendas en proceso de limpieza y mantenimiento.</p>
         </div>
@@ -104,7 +106,7 @@ export const Lavanderia = () => {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gray" size={20} />
           <input 
             type="text" 
-            placeholder="Buscar por código o tipo..."
+            placeholder={t('common.search')}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-3 bg-white border border-brand-gray/20 rounded-semi font-bold outline-none focus:border-brand-blue transition-all shadow-sm"
